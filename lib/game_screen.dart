@@ -78,6 +78,7 @@ class _GameScreenState extends State<GameScreen> {
         overlayBuilderMap: {
           'hud': (_, __) => const Hud(),
           'hint': (_, __) => const ControlsHint(),
+          'keyhint': (_, __) => const ActionKeyLabel(),
           'minimap': (_, game) => MiniMap(
                 game: game,
                 size: Vector2.all(130),
@@ -93,7 +94,13 @@ class _GameScreenState extends State<GameScreen> {
               ),
           'busted': (_, __) => BustedOverlay(onRespawn: _respawn),
         },
-        initialActiveOverlays: const ['hud', 'hint', 'minimap', 'busted'],
+        initialActiveOverlays: const [
+          'hud',
+          'hint',
+          'keyhint',
+          'minimap',
+          'busted'
+        ],
       ),
     );
   }

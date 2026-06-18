@@ -157,6 +157,45 @@ class BustedOverlay extends StatelessWidget {
   }
 }
 
+/// 공격 버튼 위에 겹쳐 표시하는 키보드 키 라벨("Space").
+/// game_screen 의 JoystickAction 위치(우하단, margin bottom36/right36, size70)에 맞춰 배치.
+class ActionKeyLabel extends StatelessWidget {
+  const ActionKeyLabel({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.bottomRight,
+      child: Padding(
+        // 버튼 중앙(우 71 / 하 71)에 가로 정렬, 버튼 상단쯤에 라벨이 오도록.
+        padding: const EdgeInsets.only(right: 44, bottom: 98),
+        child: IgnorePointer(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.72),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: Colors.white70, width: 1.5),
+              boxShadow: const [
+                BoxShadow(blurRadius: 3, color: Colors.black54),
+              ],
+            ),
+            child: const Text(
+              'Space',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// 우상단 조작 안내(데스크톱/웹).
 class ControlsHint extends StatelessWidget {
   const ControlsHint({super.key});
