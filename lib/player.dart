@@ -2,6 +2,8 @@ import 'package:bonfire/bonfire.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'audio.dart';
+import 'events.dart';
 import 'sprites.dart';
 import 'wanted.dart';
 
@@ -45,7 +47,7 @@ class GtaPlayer extends SimplePlayer with BlockMovementCollision {
   void onJoystickAction(JoystickActionEvent event) {
     if (isDead) return;
     final isAttack = event.id == PlayerAction.attack ||
-        event.id == LogicalKeyboardKey.space;
+        event.id == LogicalKeyboardKey.shiftRight;
     if (isAttack && event.event == ActionEvent.DOWN) {
       _meleeAttack();
     }
@@ -53,6 +55,8 @@ class GtaPlayer extends SimplePlayer with BlockMovementCollision {
   }
 
   void _meleeAttack() {
+    GameAudio.swing();
+    GameAudio.kiai();
     simpleAttackMelee(
       damage: attackPower,
       size: Vector2.all(tile),
@@ -63,7 +67,7 @@ class GtaPlayer extends SimplePlayer with BlockMovementCollision {
 
   @override
   void onReceiveDamage(AttackOriginEnum attacker, double damage, identify) {
-    if (_invuln > 0) return;
+    if (!GameState.running || _invuln > 0) return;
     super.onReceiveDamage(attacker, damage, identify);
   }
 

@@ -5,32 +5,34 @@ import 'package:bonfire/bonfire.dart';
 import 'npcs.dart';
 import 'wanted.dart';
 
-/// 보이지 않는 "감독" 컴포넌트.
-/// - 수배도(별)에 비례해 경찰을 스폰하여 플레이어를 추격시킨다.
-/// - 시민/갱단 인구를 일정 수준으로 유지(플레이어 주변에 보충).
+/// 보이지 않는 "감독" — 마을 인구(마을사람/산적/괴물) 유지 + 악명에 따른 경비병 출동.
 class WorldDirector extends GameComponent {
   final List<Vector2> roadPoints;
   final Random rng;
 
-  double _copT = 0;
+  double _guardT = 0;
   double _popT = 0;
 
-  static const int maxCivilians = 38;
-  static const int maxGangsters = 14;
+  static const int maxVillagers = 34;
+  static const int maxBandits = 12;
+  static const int maxMonsters = 10;
 
   WorldDirector(this.roadPoints, this.rng);
 
   @override
   Future<void> onMount() async {
     super.onMount();
-    // 초기 인구 — 맵 전역에 흩뿌림.
-    for (var i = 0; i < 22; i++) {
+    for (var i = 0; i < 20; i++) {
       final p = _anyPoint();
-      if (p != null) gameRef.add(Civilian(p));
+      if (p != null) gameRef.add(Villager(p));
     }
     for (var i = 0; i < 4; i++) {
       final p = _anyPoint();
-      if (p != null) gameRef.add(Gangster(p));
+      if (p != null) gameRef.add(Bandit(p));
+    }
+    for (var i = 0; i < 4; i++) {
+      final p = _anyPoint();
+      if (p != null) gameRef.add(Monster(p));
     }
   }
 
@@ -54,18 +56,18 @@ class WorldDirector extends GameComponent {
     if (player == null || player.isDead) return;
     final center = player.absoluteCenter;
 
-    // 경찰 스폰: 별 개수만큼 유지.
-    _copT += dt;
-    if (_copT >= 1.2) {
-      _copT = 0;
-      final target = Wanted.instance.starCount;
-      var need = target - Wanted.instance.activeCops;
+    // 경비병: 악명(별)만큼 유지.
+    _guardT += dt;
+    if (_guardT >= 1.2) {
+      _guardT = 0;
+      final need = Wanted.instance.starCount - Wanted.instance.activeCops;
       var guard = 0;
-      while (need > 0 && guard < 4) {
+      var n = need;
+      while (n > 0 && guard < 4) {
         final p = _pointNear(center, min: 150, max: 300);
         if (p == null) break;
-        gameRef.add(Cop(p));
-        need--;
+        gameRef.add(Guard(p));
+        n--;
         guard++;
       }
     }
@@ -74,15 +76,20 @@ class WorldDirector extends GameComponent {
     _popT += dt;
     if (_popT >= 3.5) {
       _popT = 0;
-      final civ = gameRef.query<Civilian>().length;
-      final gang = gameRef.query<Gangster>().length;
-      if (civ < 18 && civ < maxCivilians) {
+      if (gameRef.query<Villager>().length < 16 &&
+          gameRef.query<Villager>().length < maxVillagers) {
         final p = _pointNear(center);
-        if (p != null) gameRef.add(Civilian(p));
+        if (p != null) gameRef.add(Villager(p));
       }
-      if (gang < 6 && gang < maxGangsters) {
+      if (gameRef.query<Bandit>().length < 6 &&
+          gameRef.query<Bandit>().length < maxBandits) {
         final p = _pointNear(center);
-        if (p != null) gameRef.add(Gangster(p));
+        if (p != null) gameRef.add(Bandit(p));
+      }
+      if (gameRef.query<Monster>().length < 5 &&
+          gameRef.query<Monster>().length < maxMonsters) {
+        final p = _pointNear(center, min: 220, max: 420);
+        if (p != null) gameRef.add(Monster(p));
       }
     }
   }

@@ -32,6 +32,11 @@ class Wanted {
   }
 
   void addMoney(int v) => money.value += v;
+
+  // 중세 리브랜드: money == gold
+  ValueNotifier<int> get gold => money;
+  void addGold(int v) => addMoney(v);
+
   void addKill() => kills.value += 1;
 
   void _syncStars() {

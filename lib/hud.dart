@@ -21,8 +21,12 @@ class Hud extends StatelessWidget {
                 _chip(
                   ValueListenableBuilder<int>(
                     valueListenable: w.money,
-                    builder: (_, v, __) => Text('\$$v',
-                        style: _t(const Color(0xFFFFD54F), 18)),
+                    builder: (_, v, __) => Row(children: [
+                      const Icon(Icons.monetization_on,
+                          color: Color(0xFFFFD54F), size: 16),
+                      const SizedBox(width: 4),
+                      Text('$v', style: _t(const Color(0xFFFFD54F), 17)),
+                    ]),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -40,11 +44,20 @@ class Hud extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 8),
-            // 수배 별
+            // 악명(별)
             ValueListenableBuilder<int>(
               valueListenable: w.stars,
               builder: (_, stars, __) => Row(
-                children: List.generate(5, (i) {
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.only(right: 4),
+                    child: Text('악명',
+                        style: TextStyle(
+                            color: Colors.white60,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold)),
+                  ),
+                  ...List.generate(5, (i) {
                   final on = i < stars;
                   return Icon(
                     Icons.star,
@@ -54,7 +67,8 @@ class Hud extends StatelessWidget {
                         ? const [Shadow(blurRadius: 6, color: Colors.black)]
                         : null,
                   );
-                }),
+                  }),
+                ],
               ),
             ),
             const SizedBox(height: 8),
@@ -181,7 +195,7 @@ class ActionKeyLabel extends StatelessWidget {
               ],
             ),
             child: const Text(
-              'Space',
+              '⇧ Shift',
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 12,
@@ -213,7 +227,7 @@ class ControlsHint extends StatelessWidget {
               borderRadius: BorderRadius.circular(8),
             ),
             child: const Text(
-              'WASD/방향키 이동 · Space 공격\n시민·경찰을 치면 수배도↑',
+              'WASD/방향키 이동 · 우 Shift 공격\n집 문으로 들어가 보세요 · 악명↑ 시 경비병 출동',
               textAlign: TextAlign.right,
               style: TextStyle(color: Colors.white70, fontSize: 11),
             ),
