@@ -70,6 +70,11 @@ flutter:
     - assets/images/build/
     - assets/audio/
 
+  fonts:
+    - family: Galmuri11
+      fonts:
+        - asset: assets/fonts/galmuri11.ttf
+
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
 

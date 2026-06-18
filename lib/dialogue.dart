@@ -19,6 +19,12 @@ class Lines {
     '성벽 너머는 위험하다네.',
     '여행자는 처음 보는구먼.',
     '신께서 굽어살피시길.',
+    '일하러 가야지, 늦겠어.',
+    '주막 교대 시간이군.',
+    '시장에 물건 떼러 가는 길이라네.',
+    '오늘도 방앗간 일이 산더미야.',
+    '품삯이라도 두둑하면 좋으련만.',
+    '우물물 길어오라 했는데.',
   ];
 
   static const villagerScared = [
@@ -87,12 +93,12 @@ class Speech extends PositionComponent {
       : super(position: worldPos, priority: 1000000) {
     _paint = TextPaint(
       style: TextStyle(
-        fontSize: 7,
+        fontFamily: 'Galmuri11',
+        fontSize: 8,
         color: color,
-        fontWeight: FontWeight.w600,
       ),
     );
-    _w = text.length * 4.6; // 폭 추정(한글 기준)
+    _w = text.length * 5.2; // 폭 추정(한글 기준)
   }
 
   @override

@@ -75,7 +75,11 @@ class GtaPlayer extends SimplePlayer with BlockMovementCollision {
   void onRemoveLife(double life) {
     showDamage(
       life,
-      config: TextStyle(fontSize: 9, color: Colors.red.shade300),
+      config: TextStyle(
+        fontFamily: 'Galmuri11',
+        fontSize: 9,
+        color: Colors.red.shade300,
+      ),
     );
     super.onRemoveLife(life);
   }

@@ -188,7 +188,7 @@ class _GameScreenState extends State<GameScreen> {
       components: interior.components,
       cameraConfig: CameraConfig(
         moveOnlyMapArea: true,
-        zoom: getZoomFromMaxVisibleTile(context, 16, 13),
+        zoom: getZoomFromMaxVisibleTile(context, 16, 16),
         initPosition: interior.playerSpawn,
       ),
       backgroundColor: const Color(0xFF0d0a08),

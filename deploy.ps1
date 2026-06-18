@@ -1,6 +1,7 @@
 # GitHub Pages 배포: 웹 빌드(/bonfire_gta/) → gh-pages 브랜치 푸시
-$ErrorActionPreference = "Stop"
+# 주의: flutter는 안내문을 stderr로 출력 → ErrorActionPreference=Stop 사용 금지.
 flutter build web --no-tree-shake-icons --base-href /bonfire_gta/
+if ($LASTEXITCODE -ne 0) { Write-Error "flutter build failed"; exit 1 }
 $tmp = Join-Path $env:TEMP "gta_pages_deploy"
 if (Test-Path $tmp) { Remove-Item $tmp -Recurse -Force }
 New-Item -ItemType Directory $tmp | Out-Null

@@ -116,9 +116,9 @@ class TextGameObject extends TextComponent {
           priority: 1000000,
           textRenderer: TextPaint(
             style: TextStyle(
+              fontFamily: 'Galmuri11',
               fontSize: 8,
               color: color,
-              fontWeight: FontWeight.bold,
               shadows: const [Shadow(blurRadius: 2, color: Colors.black)],
             ),
           ),

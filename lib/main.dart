@@ -19,9 +19,13 @@ class BonfireGtaApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Bonfire GTA',
+      title: '변경의 기사',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData.dark(useMaterial3: true),
+      theme: ThemeData(
+        useMaterial3: true,
+        brightness: Brightness.dark,
+        fontFamily: 'Galmuri11',
+      ),
       home: const GameScreen(),
     );
   }

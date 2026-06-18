@@ -11,11 +11,14 @@ import 'wanted.dart';
 
 final _rng = Random();
 
-/// 마을 사람(작은 크리터) — 배회하며 잡담, 공격받으면 비명 지르며 도주.
-/// 시민을 때리거나 죽이면 악명(수배)이 오른다.
-class Villager extends SimpleEnemy with RandomMovement {
+/// 마을 사람(작은 크리터) — 일터로 오가는 듯 목적지를 향해 걷고, 멈춰 잡담한다.
+/// 공격받으면 비명 지르며 도주. 해치면 악명(수배)이 오른다.
+class Villager extends SimpleEnemy with RandomMovement, BlockMovementCollision {
   static const double s = 16;
   double _fleeTimer = 0;
+  bool _traveling = false;
+  Vector2 _dest = Vector2.zero();
+  double _phaseT = 0;
   final _bark = BarkTimer();
 
   Villager(Vector2 position)
@@ -23,10 +26,12 @@ class Villager extends SimpleEnemy with RandomMovement {
           position: position,
           animation: CivilianSprites.animation(),
           size: Vector2.all(s),
-          speed: s * 1.6,
+          speed: s * (1.4 + _rng.nextDouble() * 0.5),
           life: 24,
           initDirection: Direction.down,
-        );
+        ) {
+    _phaseT = _rng.nextDouble() * 3;
+  }
 
   @override
   Future<void> onLoad() {
@@ -34,10 +39,18 @@ class Villager extends SimpleEnemy with RandomMovement {
     return super.onLoad();
   }
 
+  void _pickDestination() {
+    final a = _rng.nextDouble() * pi * 2;
+    final dist = 90 + _rng.nextDouble() * 160;
+    _dest = absoluteCenter + Vector2(cos(a), sin(a)) * dist;
+  }
+
   @override
   void update(double dt) {
     super.update(dt);
     if (isDead) return;
+
+    // 공격받음 → 도주.
     if (_fleeTimer > 0) {
       _fleeTimer -= dt;
       final player = gameRef.player;
@@ -46,9 +59,28 @@ class Villager extends SimpleEnemy with RandomMovement {
         moveFromAngle(atan2(away.y, away.x), speed: speed * 2.2);
       }
       if (_fleeTimer <= 0) stopMove();
+      return;
+    }
+
+    _phaseT -= dt;
+    if (_traveling) {
+      final d = _dest - absoluteCenter;
+      if (d.length < 12 || _phaseT <= 0) {
+        _traveling = false;
+        _phaseT = 1.5 + _rng.nextDouble() * 3; // 도착 후 잠시 머무름
+        stopMove();
+      } else {
+        moveFromAngle(atan2(d.y, d.x), speed: speed);
+      }
     } else {
-      runRandomMovement(dt, speed: speed, maxDistance: 60, minDistance: 20);
       _bark.update(dt, this, Lines.villager, Colors.white);
+      if (_phaseT <= 0) {
+        _pickDestination();
+        _traveling = true;
+        _phaseT = 3 + _rng.nextDouble() * 4; // 이동 시간 제한(막히면 포기)
+      } else {
+        runRandomMovement(dt, speed: speed * 0.6, maxDistance: 28, minDistance: 12);
+      }
     }
   }
 

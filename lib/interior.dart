@@ -5,7 +5,8 @@ import 'package:bonfire/bonfire.dart';
 import 'events.dart';
 import 'npcs.dart';
 
-/// 집 내부 — 돌벽으로 둘러싸인 방. 가족이 살고 있고, 아래쪽 출구로 나가면 마을로.
+/// 집 내부 — 가구가 갖춰진 가정집. 가족이 살며 돌아다닌다.
+/// 아래쪽 러그(출구)로 나가면 마을로.
 /// 지형 값: 0 = 돌벽(충돌), 1 = 나무 바닥.
 class Interior {
   static const double wall = 0;
@@ -25,12 +26,30 @@ class Interior {
     this.tile = 16,
     required this.seed,
     required this.returnSpawn,
-  })  : w = 14,
-        h = 10 {
+  })  : w = 16,
+        h = 12 {
     _generate();
   }
 
-  Vector2 _pos(int x, int y) => Vector2(x * tile, y * tile);
+  Vector2 _px(double x, double y) => Vector2(x, y);
+
+  void _decor(String sprite, Vector2 pos, Vector2 size) {
+    components.add(GameDecoration.withSprite(
+      sprite: Sprite.load(sprite),
+      position: pos,
+      size: size,
+    ));
+  }
+
+  void _solid(String sprite, Vector2 pos, Vector2 size, Vector2 colSize,
+      Vector2 colPos) {
+    components.add(GameDecorationWithCollision.withSprite(
+      sprite: Sprite.load(sprite),
+      position: pos,
+      size: size,
+      collisions: [RectangleHitbox(size: colSize, position: colPos)],
+    ));
+  }
 
   void _generate() {
     final rng = Random(seed);
@@ -43,47 +62,49 @@ class Interior {
     );
 
     final cx = w ~/ 2;
+    final t = tile;
 
-    // 출구(아래 가운데) — 바닥에 러그를 깔고 센서 배치.
-    components.add(
-      GameDecoration.withSprite(
-        sprite: Sprite.load('build/rug.png'),
-        position: _pos(cx, h - 2),
-        size: Vector2.all(tile),
-      ),
-    );
+    // 출구(아래 가운데): 러그 + 센서. 플레이어는 그 위에서 시작.
+    _decor('build/rug.png', _px(cx * t, (h - 2) * t), Vector2.all(t));
     components.add(_ExitSensor(
-      position: _pos(cx, h - 2),
-      size: Vector2.all(tile),
+      position: _px(cx * t, (h - 2) * t),
+      size: Vector2.all(t),
       returnSpawn: returnSpawn,
     ));
-    playerSpawn = _pos(cx, h - 3) + Vector2(tile / 2, tile / 2);
+    playerSpawn = _px(cx * t + t / 2, (h - 3) * t + t / 2);
 
-    // 가구(통/탁자).
-    components.add(GameDecorationWithCollision.withSprite(
-      sprite: Sprite.load('itens/table.png'),
-      position: _pos(2, 2),
-      size: Vector2.all(tile),
-      collisions: [RectangleHitbox(size: Vector2.all(tile))],
-    ));
-    components.add(GameDecorationWithCollision.withSprite(
-      sprite: Sprite.load('itens/barrel.png'),
-      position: _pos(w - 3, 2),
-      size: Vector2.all(tile),
-      collisions: [RectangleHitbox(size: Vector2.all(tile))],
-    ));
+    // 벽난로(위벽 가운데).
+    _solid('build/hearth.png', _px(cx * t - 8, 2), Vector2(16, 22),
+        Vector2(14, 8), Vector2(1, 12));
 
-    // 가족 2~4명.
-    final count = 2 + rng.nextInt(3);
+    // 침대(좌상단).
+    _solid('build/bed.png', _px(t + 2, t + 4), Vector2(28, 18),
+        Vector2(28, 14), Vector2(0, 4));
+
+    // 식탁 + 의자(가운데).
+    _solid('itens/table.png', _px(cx * t - 8, 5 * t), Vector2.all(16),
+        Vector2.all(14), Vector2(1, 1));
+    _decor('build/chair.png', _px(cx * t - 22, 5 * t + 2), Vector2(10, 12));
+    _decor('build/chair.png', _px(cx * t + 14, 5 * t + 2), Vector2(10, 12));
+
+    // 책장/찬장(우측 벽), 통, 화분.
+    _solid('itens/bookshelf.png', _px((w - 3) * t, 2 * t), Vector2.all(16),
+        Vector2.all(15), Vector2(0.5, 0.5));
+    _solid('itens/barrel.png', _px(t + 2, (h - 3) * t), Vector2.all(16),
+        Vector2.all(14), Vector2(1, 1));
+    _decor('build/plant.png', _px((w - 3) * t + 2, t + 2), Vector2(12, 14));
+
+    // 가족(3~4명) — 방을 돌아다니며 생활.
+    final count = 3 + rng.nextInt(2);
     final spots = [
-      _pos(3, 3),
-      _pos(w - 4, 4),
-      _pos(4, h - 4),
-      _pos(w - 5, h - 4),
+      _px(3 * t, 3 * t),
+      _px((w - 4) * t, 4 * t),
+      _px(4 * t, (h - 4) * t),
+      _px((w - 5) * t, (h - 4) * t),
     ];
     for (var i = 0; i < count; i++) {
       components.add(FamilyMember(
-        spots[i % spots.length] + Vector2(tile / 2, tile / 2),
+        spots[i % spots.length] + Vector2(t / 2, t / 2),
         path: i.isEven ? 'human.png' : 'orc.png',
       ));
     }
