@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import 'profile.dart';
+import 'quests.dart';
+import 'ui_bus.dart';
 import 'wanted.dart';
 
 /// 화면 좌상단 HUD — 돈/처치수/수배별(★)/체력바.
@@ -97,6 +100,88 @@ class Hud extends StatelessWidget {
                   ),
                 ),
               ),
+            ),
+            const SizedBox(height: 6),
+            // 레벨 + 경험치
+            ValueListenableBuilder<int>(
+              valueListenable: Profile.instance.level,
+              builder: (_, lv, __) => ValueListenableBuilder<int>(
+                valueListenable: Profile.instance.xp,
+                builder: (_, xp, __) {
+                  final need = Profile.instance.xpToNext;
+                  return Row(
+                    children: [
+                      Container(
+                        padding:
+                            const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF5C6BC0),
+                          borderRadius: BorderRadius.circular(5),
+                        ),
+                        child: Text('Lv $lv',
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold)),
+                      ),
+                      const SizedBox(width: 6),
+                      Container(
+                        width: 118,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          color: Colors.black54,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: FractionallySizedBox(
+                          alignment: Alignment.centerLeft,
+                          widthFactor: (xp / need).clamp(0.0, 1.0),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF9FA8DA),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 6),
+            // 퀘스트 목표
+            ValueListenableBuilder<int>(
+              valueListenable: QuestLog.instance.tick,
+              builder: (_, __, ___) {
+                final a = QuestLog.instance.active.value;
+                if (a == null) return const SizedBox.shrink();
+                return Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.black54,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: const Color(0xFFFFD54F), width: 1),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.assignment,
+                          color: Color(0xFFFFD54F), size: 13),
+                      const SizedBox(width: 5),
+                      Text(
+                        '${a.def.title}  ${a.progress}/${a.def.target}',
+                        style: TextStyle(
+                            color: a.isDone
+                                ? const Color(0xFF8BC34A)
+                                : Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                );
+              },
             ),
           ],
         ),
@@ -219,7 +304,7 @@ class ControlsHint extends StatelessWidget {
       child: Align(
         alignment: Alignment.topRight,
         child: Padding(
-          padding: const EdgeInsets.all(10),
+          padding: const EdgeInsets.only(top: 48, right: 10),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
@@ -227,9 +312,37 @@ class ControlsHint extends StatelessWidget {
               borderRadius: BorderRadius.circular(8),
             ),
             child: const Text(
-              'WASD/방향키 이동 · 우 Shift 공격\n집 문으로 들어가 보세요 · 악명↑ 시 경비병 출동',
+              'WASD 이동 · 우 Shift 공격 · F 원거리 · E 대화',
               textAlign: TextAlign.right,
               style: TextStyle(color: Colors.white70, fontSize: 11),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 우상단 설정(톱니) 버튼.
+class SettingsButton extends StatelessWidget {
+  const SettingsButton({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Align(
+        alignment: Alignment.topRight,
+        child: Padding(
+          padding: const EdgeInsets.only(top: 6, right: 8),
+          child: Material(
+            color: Colors.black54,
+            shape: const CircleBorder(),
+            child: InkWell(
+              customBorder: const CircleBorder(),
+              onTap: () => UiBus.instance.open(Panel.settings),
+              child: const Padding(
+                padding: EdgeInsets.all(7),
+                child: Icon(Icons.settings, color: Colors.white70, size: 22),
+              ),
             ),
           ),
         ),

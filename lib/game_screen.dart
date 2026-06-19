@@ -5,12 +5,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'audio.dart';
+import 'day_night.dart';
 import 'director.dart';
 import 'events.dart';
 import 'hud.dart';
 import 'interior.dart';
+import 'panels.dart';
 import 'player.dart';
 import 'story.dart';
+import 'ui_bus.dart';
 import 'village_map.dart';
 import 'wanted.dart';
 
@@ -110,6 +113,12 @@ class _GameScreenState extends State<GameScreen> {
               size: 70,
               margin: const EdgeInsets.only(bottom: 36, right: 36),
             ),
+            JoystickAction(
+              actionId: PlayerAction.attackRange,
+              sprite: Sprite.load('joystick/joystick_attack_range.png'),
+              size: 54,
+              margin: const EdgeInsets.only(bottom: 116, right: 44),
+            ),
           ],
         ),
         Keyboard(
@@ -118,7 +127,11 @@ class _GameScreenState extends State<GameScreen> {
               KeyboardDirectionalKeys.arrows(),
               KeyboardDirectionalKeys.wasd(),
             ],
-            acceptedKeys: [LogicalKeyboardKey.shiftRight],
+            acceptedKeys: [
+              LogicalKeyboardKey.shiftRight,
+              LogicalKeyboardKey.keyE,
+              LogicalKeyboardKey.keyF,
+            ],
           ),
         ),
       ];
@@ -142,8 +155,36 @@ class _GameScreenState extends State<GameScreen> {
             zoom: 0.55,
           ),
       'busted': (_, __) => BustedOverlay(onRespawn: _respawn),
+      'settingsBtn': (_, __) => const SettingsButton(),
+      'prompt': (_, __) => const InteractPrompt(),
+      'panel': (_, game) => ValueListenableBuilder<Panel>(
+            valueListenable: UiBus.instance.panel,
+            builder: (_, p, __) {
+              switch (p) {
+                case Panel.quest:
+                  return const QuestPanel();
+                case Panel.shop:
+                  return ShopPanel(game: game);
+                case Panel.settings:
+                  return const SettingsPanel();
+                case Panel.none:
+                  return const SizedBox.shrink();
+              }
+            },
+          ),
     };
   }
+
+  static const _overlayKeys = [
+    'hud',
+    'hint',
+    'keyhint',
+    'minimap',
+    'busted',
+    'settingsBtn',
+    'prompt',
+    'panel',
+  ];
 
   Widget _buildOverworld(BuildContext context) {
     final rng = Random(_villageSeed);
@@ -159,6 +200,7 @@ class _GameScreenState extends State<GameScreen> {
         ...world.decorations,
         WorldDirector(world.roadPoints, Random()),
       ],
+      hudComponents: [DayNight()],
       cameraConfig: CameraConfig(
         moveOnlyMapArea: true,
         zoom: getZoomFromMaxVisibleTile(context, 16, 22),
@@ -166,13 +208,7 @@ class _GameScreenState extends State<GameScreen> {
       ),
       backgroundColor: const Color(0xFF1c2a1c),
       overlayBuilderMap: _overlays(),
-      initialActiveOverlays: const [
-        'hud',
-        'hint',
-        'keyhint',
-        'minimap',
-        'busted'
-      ],
+      initialActiveOverlays: _overlayKeys,
     );
   }
 
@@ -197,6 +233,9 @@ class _GameScreenState extends State<GameScreen> {
         'hud',
         'keyhint',
         'busted',
+        'settingsBtn',
+        'prompt',
+        'panel',
       ],
     );
   }

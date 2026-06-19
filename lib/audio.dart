@@ -2,6 +2,8 @@ import 'dart:math';
 
 import 'package:flame_audio/flame_audio.dart';
 
+import 'profile.dart';
+
 /// 게임 오디오 — BGM 루프 + 효과음 + 한국어 음성("얍!").
 /// 에셋은 tool/make_audio.js(효과음) + SAPI Heami(음성)로 생성, assets/audio/ 에 위치.
 class GameAudio {
@@ -38,14 +40,20 @@ class GameAudio {
     if (_bgmStarted || !enabled) return;
     _bgmStarted = true;
     try {
-      FlameAudio.bgm.play('bgm.wav', volume: 0.30);
+      FlameAudio.bgm.play('bgm.wav', volume: Profile.instance.bgmVol.value);
+    } catch (_) {}
+  }
+
+  static void setBgmVolume(double v) {
+    try {
+      FlameAudio.bgm.audioPlayer.setVolume(v);
     } catch (_) {}
   }
 
   static void _play(String f, double v) {
     if (!enabled) return;
     try {
-      FlameAudio.play(f, volume: v);
+      FlameAudio.play(f, volume: v * Profile.instance.sfxVol.value);
     } catch (_) {}
   }
 

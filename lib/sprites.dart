@@ -31,6 +31,26 @@ class PlayerSprites {
         3,
         step: 0.08,
       );
+
+  /// 원거리(마법 화살) — fireball_right.png 69x23 = 3프레임.
+  static Future<SpriteAnimation> get fireballRight => SpriteAnimation.load(
+        'player/fireball_right.png',
+        SpriteAnimationData.sequenced(
+          amount: 3,
+          stepTime: 0.1,
+          textureSize: Vector2.all(23),
+        ),
+      );
+
+  /// 명중 폭발 — explosion_fire.png 192x32 = 6프레임.
+  static Future<SpriteAnimation> get explosion => SpriteAnimation.load(
+        'player/explosion_fire.png',
+        SpriteAnimationData.sequenced(
+          amount: 6,
+          stepTime: 0.08,
+          textureSize: Vector2.all(32),
+        ),
+      );
 }
 
 /// 갱단(고블린) 스프라이트.

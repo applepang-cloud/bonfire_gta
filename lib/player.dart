@@ -4,11 +4,13 @@ import 'package:flutter/services.dart';
 
 import 'audio.dart';
 import 'events.dart';
+import 'profile.dart';
 import 'sprites.dart';
+import 'ui_bus.dart';
 import 'wanted.dart';
 
 /// 공격 액션 ID.
-enum PlayerAction { attack }
+enum PlayerAction { attack, attackRange }
 
 /// 플레이어(기사). 조이스틱 + 키보드(WASD/방향키 이동, Space 공격).
 /// 사망하면 Busted 상태로 전환되어 게임 화면이 리스폰을 띄운다.
@@ -33,6 +35,7 @@ class GtaPlayer extends SimplePlayer with BlockMovementCollision {
   @override
   Future<void> onLoad() {
     _invuln = 3.0; // 스폰 직후 무적 3초
+    applyStats();
     // 발 부분만 충돌 → 자연스러운 탑다운 이동.
     add(RectangleHitbox(
       size: Vector2(tile * 0.5, tile * 0.4),
@@ -41,15 +44,31 @@ class GtaPlayer extends SimplePlayer with BlockMovementCollision {
     return super.onLoad();
   }
 
+  /// Profile(레벨/장비)에 따라 체력·공격력 재계산. 구매 시에도 호출(완전 회복).
+  void applyStats() {
+    final p = Profile.instance;
+    initialLife(150 + p.hpBonus); // maxLife 갱신 + 완전 회복
+    attackPower = 25 + p.atkBonus;
+  }
+
   void heal(double v) => addLife(v);
 
   @override
   void onJoystickAction(JoystickActionEvent event) {
     if (isDead) return;
-    final isAttack = event.id == PlayerAction.attack ||
-        event.id == LogicalKeyboardKey.shiftRight;
-    if (isAttack && event.event == ActionEvent.DOWN) {
-      _meleeAttack();
+    if (event.event == ActionEvent.DOWN) {
+      final id = event.id;
+      if (id == LogicalKeyboardKey.keyE) {
+        Interaction.instance.activate();
+      } else if (!GameState.running) {
+        // 일시정지(패널 열림) 중엔 공격 무시.
+      } else if (id == LogicalKeyboardKey.keyF ||
+          id == PlayerAction.attackRange) {
+        _rangedAttack();
+      } else if (id == LogicalKeyboardKey.shiftRight ||
+          id == PlayerAction.attack) {
+        _meleeAttack();
+      }
     }
     super.onJoystickAction(event);
   }
@@ -62,6 +81,19 @@ class GtaPlayer extends SimplePlayer with BlockMovementCollision {
       size: Vector2.all(tile),
       animationRight: PlayerSprites.attackEffectRight,
       withPush: true,
+    );
+  }
+
+  void _rangedAttack() {
+    if (!Profile.instance.hasBow) return;
+    GameAudio.swing();
+    simpleAttackRange(
+      animationRight: PlayerSprites.fireballRight,
+      animationDestroy: PlayerSprites.explosion,
+      size: Vector2.all(tile * 0.7),
+      destroySize: Vector2.all(tile),
+      speed: tile * 8,
+      damage: 14 + attackPower * 0.5,
     );
   }
 

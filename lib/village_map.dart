@@ -4,6 +4,7 @@ import 'package:bonfire/bonfire.dart';
 
 import 'collectibles.dart';
 import 'houses.dart';
+import 'npc_town.dart';
 
 /// 절차적 중세 마을(오버월드).
 /// 잔디 평원에 흙길이 굽이치고, 강이 흐르며, 집들이 마을을 이루고 숲이 둘러싼다.
@@ -162,6 +163,10 @@ class VillageWorld {
 
     // 시작: 가로/세로 길 교차점 부근.
     playerSpawn = _pos(roadX, roadY) + Vector2.all(tile / 2);
+
+    // 마을 NPC: 촌장(의뢰)과 상인(상점)을 시작점 근처 길 위에 배치.
+    decorations.add(QuestGiver(_pos(roadX, roadY - 3) + Vector2.all(tile / 2)));
+    decorations.add(Merchant(_pos(roadX + 3, roadY) + Vector2.all(tile / 2)));
   }
 
   // ---- 물가 생성 ----

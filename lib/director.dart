@@ -34,6 +34,12 @@ class WorldDirector extends GameComponent {
       final p = _anyPoint();
       if (p != null) gameRef.add(Monster(p));
     }
+    for (var i = 0; i < 2; i++) {
+      final p = _anyPoint();
+      if (p != null) gameRef.add(Archer(p));
+    }
+    final op = _anyPoint();
+    if (op != null) gameRef.add(Ogre(op));
   }
 
   Vector2? _anyPoint() =>
@@ -90,6 +96,14 @@ class WorldDirector extends GameComponent {
           gameRef.query<Monster>().length < maxMonsters) {
         final p = _pointNear(center, min: 220, max: 420);
         if (p != null) gameRef.add(Monster(p));
+      }
+      if (gameRef.query<Archer>().length < 3) {
+        final p = _pointNear(center, min: 200, max: 400);
+        if (p != null) gameRef.add(Archer(p));
+      }
+      if (gameRef.query<Ogre>().length < 2 && rng.nextDouble() < 0.5) {
+        final p = _pointNear(center, min: 260, max: 460);
+        if (p != null) gameRef.add(Ogre(p));
       }
     }
   }

@@ -6,10 +6,15 @@ import 'package:flutter/material.dart';
 import 'audio.dart';
 import 'dialogue.dart';
 import 'events.dart';
+import 'profile.dart';
+import 'quests.dart';
 import 'sprites.dart';
 import 'wanted.dart';
 
 final _rng = Random();
+
+double _hpMul() => Profile.instance.enemyHpMul;
+double _dmg(double base) => base * Profile.instance.enemyDmgMul;
 
 /// 마을 사람(작은 크리터) — 일터로 오가는 듯 목적지를 향해 걷고, 멈춰 잡담한다.
 /// 공격받으면 비명 지르며 도주. 해치면 악명(수배)이 오른다.
@@ -117,7 +122,7 @@ class Bandit extends SimpleEnemy with BlockMovementCollision {
           animation: GoblinSprites.animation(),
           size: Vector2.all(s),
           speed: s * 1.9,
-          life: 55,
+          life: 55 * _hpMul(),
           initDirection: Direction.down,
         );
 
@@ -139,7 +144,7 @@ class Bandit extends SimpleEnemy with BlockMovementCollision {
       closePlayer: (player) {
         animation?.showStroke(const Color(0xFFFF5252), 1);
         simpleAttackMelee(
-          damage: 9,
+          damage: _dmg(9),
           size: Vector2.all(s),
           interval: 950,
           withPush: false,
@@ -158,6 +163,8 @@ class Bandit extends SimpleEnemy with BlockMovementCollision {
   void onDie() {
     Wanted.instance.addGold(20 + _rng.nextInt(20));
     Wanted.instance.addKill();
+    Profile.instance.addXp(15);
+    QuestLog.instance.onKill(QuestType.killBandit);
     GameAudio.coin();
     removeFromParent();
     super.onDie();
@@ -175,7 +182,7 @@ class Monster extends SimpleEnemy with BlockMovementCollision {
           animation: PersonSprites(path: path).animation(),
           size: Vector2.all(s),
           speed: s * 1.7,
-          life: 110,
+          life: 110 * _hpMul(),
           initDirection: Direction.down,
         );
 
@@ -197,7 +204,7 @@ class Monster extends SimpleEnemy with BlockMovementCollision {
       closePlayer: (player) {
         animation?.showStroke(const Color(0xFF8BC34A), 1);
         simpleAttackMelee(
-          damage: 18,
+          damage: _dmg(18),
           size: Vector2.all(s),
           interval: 1000,
           withPush: true,
@@ -215,6 +222,8 @@ class Monster extends SimpleEnemy with BlockMovementCollision {
   void onDie() {
     Wanted.instance.addGold(35 + _rng.nextInt(40));
     Wanted.instance.addKill();
+    Profile.instance.addXp(30);
+    QuestLog.instance.onKill(QuestType.killMonster);
     GameAudio.coin();
     removeFromParent();
     super.onDie();
@@ -233,7 +242,7 @@ class Guard extends SimpleEnemy with BlockMovementCollision {
           animation: PersonSprites(path: 'orc2.png').animation(),
           size: Vector2.all(s),
           speed: s * 2.2,
-          life: 85,
+          life: 85 * _hpMul(),
           initDirection: Direction.down,
         );
 
@@ -270,7 +279,7 @@ class Guard extends SimpleEnemy with BlockMovementCollision {
       closePlayer: (player) {
         animation?.showStroke(const Color(0xFF42A5F5), 1);
         simpleAttackMelee(
-          damage: 15,
+          damage: _dmg(15),
           size: Vector2.all(s),
           interval: 800,
           withPush: true,
@@ -289,6 +298,7 @@ class Guard extends SimpleEnemy with BlockMovementCollision {
     _release();
     Wanted.instance.addKill();
     Wanted.instance.addHeat(10); // 경비병 살해 → 악명 상승
+    Profile.instance.addXp(20);
     removeFromParent();
     super.onDie();
   }
@@ -297,6 +307,128 @@ class Guard extends SimpleEnemy with BlockMovementCollision {
   void onRemove() {
     _release();
     super.onRemove();
+  }
+}
+
+/// 궁수 산적 — 거리를 두고 화살(마법탄)을 쏜다. 처치 시 산적 의뢰에 반영.
+class Archer extends SimpleEnemy with BlockMovementCollision {
+  static const double s = 22;
+  final _bark = BarkTimer(min: 5, max: 10);
+
+  Archer(Vector2 position)
+      : super(
+          position: position,
+          animation: GoblinSprites.animation(),
+          size: Vector2.all(s),
+          speed: s * 1.7,
+          life: 38 * _hpMul(),
+          initDirection: Direction.down,
+        );
+
+  @override
+  Future<void> onLoad() {
+    add(RectangleHitbox(
+        size: Vector2(s * 0.5, s * 0.5), position: Vector2(s * 0.25, s * 0.4)));
+    return super.onLoad();
+  }
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+    if (isDead) return;
+    _bark.update(dt, this, Lines.bandit, const Color(0xFFFFCC80));
+    if (!GameState.running) return;
+    seeAndMoveToAttackRange(
+      minDistanceFromPlayer: s * 5,
+      radiusVision: s * 9,
+      positioned: (player) {
+        animation?.showStroke(const Color(0xFFFFB74D), 1);
+        simpleAttackRange(
+          animation: PlayerSprites.fireballRight,
+          animationDestroy: PlayerSprites.explosion,
+          size: Vector2.all(s * 0.7),
+          damage: _dmg(8),
+          speed: s * 7,
+          interval: 1400,
+          execute: GameAudio.swing,
+        );
+      },
+      notObserved: () {
+        animation?.hideStroke();
+        return true;
+      },
+    );
+  }
+
+  @override
+  void onDie() {
+    Wanted.instance.addGold(22 + _rng.nextInt(20));
+    Wanted.instance.addKill();
+    Profile.instance.addXp(20);
+    QuestLog.instance.onKill(QuestType.killBandit);
+    GameAudio.coin();
+    removeFromParent();
+    super.onDie();
+  }
+}
+
+/// 오우거 — 크고 느리지만 매우 강하고 단단하다. 처치 시 큰 보상.
+class Ogre extends SimpleEnemy with BlockMovementCollision {
+  static const double s = 38;
+  final _bark = BarkTimer(min: 4, max: 8);
+
+  Ogre(Vector2 position)
+      : super(
+          position: position,
+          animation: PersonSprites(path: 'orc.png').animation(),
+          size: Vector2.all(s),
+          speed: s * 1.0,
+          life: 280 * _hpMul(),
+          initDirection: Direction.down,
+        );
+
+  @override
+  Future<void> onLoad() {
+    add(RectangleHitbox(
+        size: Vector2(s * 0.5, s * 0.55), position: Vector2(s * 0.25, s * 0.4)));
+    return super.onLoad();
+  }
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+    if (isDead) return;
+    _bark.update(dt, this, Lines.monster, const Color(0xFF81C784));
+    if (!GameState.running) return;
+    seeAndMoveToPlayer(
+      radiusVision: s * 7,
+      margin: 5,
+      closePlayer: (player) {
+        animation?.showStroke(const Color(0xFF689F38), 1.5);
+        simpleAttackMelee(
+          damage: _dmg(30),
+          size: Vector2.all(s),
+          interval: 1300,
+          withPush: true,
+          execute: GameAudio.hit,
+        );
+      },
+      notObserved: () {
+        animation?.hideStroke();
+        return true;
+      },
+    );
+  }
+
+  @override
+  void onDie() {
+    Wanted.instance.addGold(90 + _rng.nextInt(80));
+    Wanted.instance.addKill();
+    Profile.instance.addXp(60);
+    QuestLog.instance.onKill(QuestType.killMonster);
+    GameAudio.coin();
+    removeFromParent();
+    super.onDie();
   }
 }
 

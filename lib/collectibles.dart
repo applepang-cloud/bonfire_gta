@@ -2,6 +2,7 @@ import 'package:bonfire/bonfire.dart';
 import 'package:flutter/material.dart';
 
 import 'player.dart';
+import 'profile.dart';
 import 'sprites.dart';
 import 'wanted.dart';
 
@@ -58,7 +59,8 @@ class MoneyChest extends GameDecoration with Sensor<Player> {
     if (_taken) return;
     _taken = true;
     Wanted.instance.addMoney(amount);
-    _popup('+\$$amount', Colors.amber);
+    Profile.instance.save();
+    _popup('+$amount G', Colors.amber);
     removeFromParent();
   }
 
