@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:bonfire/bonfire.dart';
 
 import 'npcs.dart';
+import 'sprites.dart';
 import 'wanted.dart';
 
 /// 보이지 않는 "감독" — 마을 인구(마을사람/산적/괴물) 유지 + 악명에 따른 경비병 출동.
@@ -13,18 +14,28 @@ class WorldDirector extends GameComponent {
   double _guardT = 0;
   double _popT = 0;
 
-  static const int maxVillagers = 34;
+  static const int maxVillagers = 42;
   static const int maxBandits = 12;
   static const int maxMonsters = 10;
 
   WorldDirector(this.roadPoints, this.rng);
 
+  // 어른 행인(휴먼) 비율을 섞어 거리를 북적이게.
+  void _spawnCivilian(Vector2 p) {
+    if (rng.nextDouble() < 0.45) {
+      gameRef.add(Villager(p,
+          anim: PersonSprites(path: 'human.png').animation(), dim: 22));
+    } else {
+      gameRef.add(Villager(p));
+    }
+  }
+
   @override
   Future<void> onMount() async {
     super.onMount();
-    for (var i = 0; i < 20; i++) {
+    for (var i = 0; i < 28; i++) {
       final p = _anyPoint();
-      if (p != null) gameRef.add(Villager(p));
+      if (p != null) _spawnCivilian(p);
     }
     for (var i = 0; i < 4; i++) {
       final p = _anyPoint();
@@ -82,10 +93,13 @@ class WorldDirector extends GameComponent {
     _popT += dt;
     if (_popT >= 3.5) {
       _popT = 0;
-      if (gameRef.query<Villager>().length < 16 &&
-          gameRef.query<Villager>().length < maxVillagers) {
-        final p = _pointNear(center);
-        if (p != null) gameRef.add(Villager(p));
+      // 일반인을 플레이어 주변에 넉넉히 유지(거리에 늘 사람이 보이게).
+      final civ = gameRef.query<Villager>().length;
+      if (civ < 24 && civ < maxVillagers) {
+        for (var k = 0; k < 2; k++) {
+          final p = _pointNear(center, min: 120, max: 360);
+          if (p != null) _spawnCivilian(p);
+        }
       }
       if (gameRef.query<Bandit>().length < 6 &&
           gameRef.query<Bandit>().length < maxBandits) {

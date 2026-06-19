@@ -20,19 +20,19 @@ double _dmg(double base) => base * Profile.instance.enemyDmgMul;
 /// 마을 사람(작은 크리터) — 일터로 오가는 듯 목적지를 향해 걷고, 멈춰 잡담한다.
 /// 공격받으면 비명 지르며 도주. 해치면 악명(수배)이 오른다.
 class Villager extends SimpleEnemy with RandomMovement, BlockMovementCollision {
-  static const double s = 16;
   double _fleeTimer = 0;
   bool _traveling = false;
   Vector2 _dest = Vector2.zero();
   double _phaseT = 0;
   final _bark = BarkTimer();
 
-  Villager(Vector2 position)
+  /// [anim]/[dim]으로 작은 크리터 주민과 어른 행인을 모두 표현.
+  Villager(Vector2 position, {SimpleDirectionAnimation? anim, double dim = 16})
       : super(
           position: position,
-          animation: CivilianSprites.animation(),
-          size: Vector2.all(s),
-          speed: s * (1.4 + _rng.nextDouble() * 0.5),
+          animation: anim ?? CivilianSprites.animation(),
+          size: Vector2.all(dim),
+          speed: dim * (1.4 + _rng.nextDouble() * 0.5),
           life: 24,
           initDirection: Direction.down,
         ) {
@@ -41,6 +41,7 @@ class Villager extends SimpleEnemy with RandomMovement, BlockMovementCollision {
 
   @override
   Future<void> onLoad() {
+    final s = size.x;
     add(RectangleHitbox(size: Vector2(s * 0.5, s * 0.5), position: Vector2(s * 0.25, s * 0.4)));
     return super.onLoad();
   }
