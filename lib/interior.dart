@@ -64,6 +64,10 @@ class Interior {
     final cx = w ~/ 2;
     final t = tile;
 
+    // 아래 벽 가운데에 문 개구부(NPC가 도망쳐 나갈 수 있게).
+    matrix[cx][h - 1] = floor;
+    final doorPos = _px(cx * t + t / 2, (h - 1) * t + t / 2);
+
     // 출구(아래 가운데): 러그 + 센서.
     _decor('build/rug.png', _px(cx * t, (h - 2) * t), Vector2.all(t));
     components.add(_ExitSensor(
@@ -95,7 +99,7 @@ class Interior {
         Vector2.all(14), Vector2(1, 1));
     _decor('build/plant.png', _px((w - 3) * t + 2, t + 2), Vector2(12, 14));
 
-    // 가족(3~4명) — 방을 돌아다니며 생활.
+    // 가족(3~4명) — 성향을 다양하게 섞어 배치.
     final count = 3 + rng.nextInt(2);
     final spots = [
       _px(3 * t, 3 * t),
@@ -103,10 +107,19 @@ class Interior {
       _px(4 * t, (h - 4) * t),
       _px((w - 5) * t, (h - 4) * t),
     ];
+    final reactions = [
+      FamilyReaction.welcome,
+      FamilyReaction.fear,
+      FamilyReaction.ask,
+      FamilyReaction.chat,
+      FamilyReaction.busy,
+    ]..shuffle(rng);
     for (var i = 0; i < count; i++) {
       components.add(FamilyMember(
         spots[i % spots.length] + Vector2(t / 2, t / 2),
         path: i.isEven ? 'human.png' : 'orc.png',
+        reaction: reactions[i % reactions.length],
+        doorPos: doorPos,
       ));
     }
   }

@@ -300,29 +300,46 @@ class Guard extends SimpleEnemy with BlockMovementCollision {
   }
 }
 
-/// 집 안 가족 구성원(휴먼) — 침입자(플레이어)를 보면 놀라 뒤로 물러선다.
-/// 공격받으면 분노해 맞서 싸운다.
-class FamilyMember extends SimpleEnemy with RandomMovement {
-  static const double s = 22;
-  bool _hostile = false;
-  bool _alarmed = false;
-  double _cooldown = 0;
-  final _bark = BarkTimer(min: 3.5, max: 7);
+/// 집 안 가족의 반응 성향.
+enum FamilyReaction { welcome, chat, ask, fear, busy }
 
-  FamilyMember(Vector2 position, {String path = 'human.png'})
-      : super(
+/// 집 안 가족 구성원(휴먼) — 성향에 따라 반기거나, 말 걸거나, 캐묻거나,
+/// 놀라 문으로 도망치거나, 제 일을 한다. 공격받으면 분노해 맞서 싸운다.
+/// 벽은 통과 못 하고(BlockMovementCollision) 바닥에서만 움직이며, 문으로만 나갈 수 있다.
+class FamilyMember extends SimpleEnemy with RandomMovement, BlockMovementCollision {
+  static const double s = 22;
+  final FamilyReaction reaction;
+  final Vector2? doorPos; // 도망칠 문 위치(있으면 그쪽으로)
+
+  bool _hostile = false;
+  bool _greeted = false;
+  final BarkTimer _bark;
+
+  FamilyMember(
+    Vector2 position, {
+    String path = 'human.png',
+    this.reaction = FamilyReaction.ask,
+    this.doorPos,
+  })  : _bark = BarkTimer(min: 3, max: 6.5),
+        super(
           position: position,
           animation: PersonSprites(path: path).animation(),
           size: Vector2.all(s),
-          speed: s * 1.8,
+          speed: s * 1.7,
           life: 50,
           initDirection: Direction.down,
         );
 
   @override
   Future<void> onLoad() {
-    add(RectangleHitbox(size: Vector2(s * 0.45, s * 0.5), position: Vector2(s * 0.28, s * 0.42)));
+    add(RectangleHitbox(
+        size: Vector2(s * 0.45, s * 0.5), position: Vector2(s * 0.28, s * 0.42)));
     return super.onLoad();
+  }
+
+  void _moveToward(Vector2 target, {double? speed}) {
+    final d = target - absoluteCenter;
+    moveFromAngle(atan2(d.y, d.x), speed: speed ?? this.speed);
   }
 
   @override
@@ -333,8 +350,8 @@ class FamilyMember extends SimpleEnemy with RandomMovement {
     if (player == null) return;
     final dist = absoluteCenter.distanceTo(player.absoluteCenter);
 
+    // 분노 → 맞서 싸움.
     if (_hostile) {
-      // 분노 → 맞서 싸움
       _bark.update(dt, this, Lines.bandit, const Color(0xFFFF8A80));
       seeAndMoveToPlayer(
         radiusVision: s * 14,
@@ -355,26 +372,75 @@ class FamilyMember extends SimpleEnemy with RandomMovement {
       return;
     }
 
-    // 침입자 발견 → 놀람 + 뒤로 물러섬
-    if (dist < s * 5) {
-      if (!_alarmed) {
-        _alarmed = true;
-        GameAudio.intruder();
-        BarkTimer.shout(this, Lines.family, const Color(0xFFFFF59D));
-      }
-      final away = absoluteCenter - player.absoluteCenter;
-      moveFromAngle(atan2(away.y, away.x), speed: speed);
-      _cooldown = 1.2;
-    } else {
-      _alarmed = false;
-      if (_cooldown > 0) {
-        _cooldown -= dt;
-        stopMove();
-      } else {
-        runRandomMovement(dt, speed: speed * 0.7, maxDistance: 32, minDistance: 12);
-        _bark.update(dt, this, Lines.family, const Color(0xFFFFF59D));
-      }
+    final near = dist < s * 6;
+
+    switch (reaction) {
+      case FamilyReaction.fear:
+        if (near) {
+          if (!_greeted) {
+            _greeted = true;
+            GameAudio.intruder();
+          }
+          _bark.update(dt, this, Lines.familyFear, const Color(0xFFFFCDD2));
+          // 문이 있으면 문으로, 없으면 플레이어 반대로.
+          if (doorPos != null) {
+            _moveToward(doorPos!, speed: speed * 1.4);
+            if (absoluteCenter.y > doorPos!.y + s * 0.4) {
+              removeFromParent(); // 문 밖으로 빠져나감
+            }
+          } else {
+            final away = absoluteCenter - player.absoluteCenter;
+            moveFromAngle(atan2(away.y, away.x), speed: speed * 1.4);
+          }
+        } else {
+          _idleChores(dt, Lines.familyBusy, const Color(0xFFFFF59D));
+        }
+        break;
+
+      case FamilyReaction.welcome:
+        if (near) {
+          _bark.update(dt, this, Lines.familyWelcome, const Color(0xFFB9F6CA));
+          if (dist > s * 2.5) {
+            _moveToward(player.absoluteCenter);
+          } else {
+            stopMove();
+          }
+        } else {
+          _idleChores(dt, Lines.familyWelcome, const Color(0xFFB9F6CA));
+        }
+        break;
+
+      case FamilyReaction.chat:
+        if (near) {
+          _bark.update(dt, this, Lines.familyChat, const Color(0xFFB3E5FC));
+          if (dist > s * 2.2) {
+            _moveToward(player.absoluteCenter, speed: speed * 0.9);
+          } else {
+            stopMove();
+          }
+        } else {
+          _idleChores(dt, Lines.familyChat, const Color(0xFFB3E5FC));
+        }
+        break;
+
+      case FamilyReaction.ask:
+        if (near) {
+          stopMove(); // 멈춰서 캐묻는다
+          _bark.update(dt, this, Lines.familyAsk, const Color(0xFFFFF59D));
+        } else {
+          _idleChores(dt, Lines.familyAsk, const Color(0xFFFFF59D));
+        }
+        break;
+
+      case FamilyReaction.busy:
+        _idleChores(dt, Lines.familyBusy, const Color(0xFFE0E0E0)); // 제 일만
+        break;
     }
+  }
+
+  void _idleChores(double dt, List<String> pool, Color color) {
+    runRandomMovement(dt, speed: speed * 0.55, maxDistance: 26, minDistance: 10);
+    _bark.update(dt, this, pool, color);
   }
 
   @override

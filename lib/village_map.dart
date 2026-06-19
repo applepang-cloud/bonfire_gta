@@ -46,17 +46,15 @@ class VillageWorld {
       matrix[w - 1][y] = water;
     }
 
-    // 강(오른쪽, 굽이치게) + 모래톱.
-    final rx = (w * 0.8).floor();
-    for (var y = 2; y < h - 2; y++) {
-      final cx = rx + (sin(y * 0.25) * 2).round();
-      for (var dx = -1; dx <= 1; dx++) {
-        final x = cx + dx;
-        if (_in(x, y)) matrix[x][y] = water;
-      }
-      for (var dx = -2; dx <= 2; dx++) {
-        final x = cx + dx;
-        if (_in(x, y) && matrix[x][y] == grass) matrix[x][y] = dirt;
+    // 자연스러운 물가: 굵은 강 + 호수 + 1칸 모래 해변.
+    _carveWater(rng);
+
+    // 시작 지점 주변은 물이 닿지 않게 정리.
+    final sx0 = w ~/ 3, sy0 = h ~/ 2;
+    for (var dx = -2; dx <= 2; dx++) {
+      for (var dy = -2; dy <= 2; dy++) {
+        final x = sx0 + dx, y = sy0 + dy;
+        if (_in(x, y) && matrix[x][y] == water) matrix[x][y] = grass;
       }
     }
 
@@ -171,6 +169,87 @@ class VillageWorld {
 
     // 시작: 가로/세로 길 교차점 부근.
     playerSpawn = _pos(roadX, roadY) + Vector2.all(tile / 2);
+  }
+
+  // ---- 물가 생성 ----
+  void _carveWater(Random rng) {
+    // 굵은 강(세로), 완만한 곡선.
+    final baseX = (w * 0.72).floor();
+    for (var y = 1; y < h - 1; y++) {
+      final meander = (sin(y * 0.11) * 4 + sin(y * 0.05) * 3).round();
+      final cxr = baseX + meander;
+      for (var dx = -3; dx <= 3; dx++) {
+        final x = cxr + dx;
+        if (_in(x, y)) matrix[x][y] = water;
+      }
+    }
+    // 호수 2개(타원).
+    _lake((w * 0.27).round(), (h * 0.30).round(), 6, 4);
+    _lake((w * 0.52).round(), (h * 0.80).round(), 5, 4);
+    _despikeWater();
+    _shoreline();
+  }
+
+  void _lake(int cx, int cy, int rx, int ry) {
+    for (var x = cx - rx; x <= cx + rx; x++) {
+      for (var y = cy - ry; y <= cy + ry; y++) {
+        if (!_in(x, y)) continue;
+        final nx = (x - cx) / rx, ny = (y - cy) / ry;
+        if (nx * nx + ny * ny <= 1.0) matrix[x][y] = water;
+      }
+    }
+  }
+
+  int _waterN4(int x, int y) {
+    var n = 0;
+    if (matrix[x - 1][y] == water) n++;
+    if (matrix[x + 1][y] == water) n++;
+    if (matrix[x][y - 1] == water) n++;
+    if (matrix[x][y + 1] == water) n++;
+    return n;
+  }
+
+  // 1칸 돌출/구멍 정리 → 매끈한 물 덩어리.
+  void _despikeWater() {
+    for (var pass = 0; pass < 2; pass++) {
+      final changes = <List<num>>[];
+      for (var x = 1; x < w - 1; x++) {
+        for (var y = 1; y < h - 1; y++) {
+          final n = _waterN4(x, y);
+          if (matrix[x][y] == water && n <= 1) {
+            changes.add([x, y, grass]);
+          } else if (matrix[x][y] == grass && n >= 3) {
+            changes.add([x, y, water]);
+          }
+        }
+      }
+      for (final c in changes) {
+        matrix[c[0] as int][c[1] as int] = (c[2] as double);
+      }
+    }
+  }
+
+  // 물에 인접한 잔디 → 모래 해변(1칸).
+  void _shoreline() {
+    final sand = <List<int>>[];
+    for (var x = 1; x < w - 1; x++) {
+      for (var y = 1; y < h - 1; y++) {
+        if (matrix[x][y] != grass) continue;
+        var near = false;
+        for (var dx = -1; dx <= 1 && !near; dx++) {
+          for (var dy = -1; dy <= 1; dy++) {
+            if (matrix[x + dx][y + dy] == water) {
+              near = true;
+              break;
+            }
+          }
+        }
+        if (near) sand.add([x, y]);
+      }
+    }
+    for (final s in sand) {
+      matrix[s[0]][s[1]] = dirt;
+    }
   }
 
   GameMap buildMap() {
