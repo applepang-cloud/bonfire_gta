@@ -17,6 +17,7 @@ class Profile {
   final ValueNotifier<int> armorTier = ValueNotifier(0); // 0~3
   final Set<String> skills = {}; // 'bow'
   final Set<String> questsDone = {};
+  final ValueNotifier<int> storyStep = ValueNotifier(0); // 메인 스토리 단계
 
   // 설정
   final ValueNotifier<double> bgmVol = ValueNotifier(0.30);
@@ -53,6 +54,7 @@ class Profile {
           ..clear()
           ..addAll(((m['quests'] as List?) ?? const []).cast<String>());
         Wanted.instance.money.value = (m['gold'] ?? 0) as int;
+        storyStep.value = (m['story'] ?? 0) as int;
         bgmVol.value = ((m['bgmVol'] ?? 0.30) as num).toDouble();
         sfxVol.value = ((m['sfxVol'] ?? 0.80) as num).toDouble();
         difficulty.value = (m['difficulty'] ?? 1) as int;
@@ -74,6 +76,7 @@ class Profile {
           'skills': skills.toList(),
           'quests': questsDone.toList(),
           'gold': Wanted.instance.money.value,
+          'story': storyStep.value,
           'bgmVol': bgmVol.value,
           'sfxVol': sfxVol.value,
           'difficulty': difficulty.value,

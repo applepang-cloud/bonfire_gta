@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'main_story.dart';
 import 'profile.dart';
 import 'quests.dart';
 import 'ui_bus.dart';
@@ -149,6 +150,38 @@ class Hud extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 6),
+            // 메인 스토리 목표
+            ValueListenableBuilder<int>(
+              valueListenable: MainStory.instance.step,
+              builder: (_, __, ___) {
+                final b = MainStory.instance.current;
+                return Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  margin: const EdgeInsets.only(bottom: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xCC1a237e),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: const Color(0xFF82B1FF)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.flag, color: Color(0xFF82B1FF), size: 13),
+                      const SizedBox(width: 5),
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 240),
+                        child: Text('[메인] ${b.objective}',
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold)),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
             // 퀘스트 목표
             ValueListenableBuilder<int>(
               valueListenable: QuestLog.instance.tick,

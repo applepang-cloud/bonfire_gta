@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:bonfire/bonfire.dart';
 
 import 'collectibles.dart';
+import 'dungeon.dart';
 import 'houses.dart';
 import 'npc_town.dart';
 
@@ -23,6 +24,8 @@ class VillageWorld {
   final List<Vector2> roadPoints = [];
   final Set<int> _occupied = {};
   late final Vector2 playerSpawn;
+  late final Vector2 questGiverPos;
+  late final Vector2 caveEntrance;
 
   VillageWorld({this.tile = 16, this.w = 64, this.h = 64, required Random rng}) {
     _generate(rng);
@@ -165,8 +168,21 @@ class VillageWorld {
     playerSpawn = _pos(roadX, roadY) + Vector2.all(tile / 2);
 
     // 마을 NPC: 촌장(의뢰)과 상인(상점)을 시작점 근처 길 위에 배치.
-    decorations.add(QuestGiver(_pos(roadX, roadY - 3) + Vector2.all(tile / 2)));
+    questGiverPos = _pos(roadX, roadY - 3) + Vector2.all(tile / 2);
+    decorations.add(QuestGiver(questGiverPos));
     decorations.add(Merchant(_pos(roadX + 3, roadY) + Vector2.all(tile / 2)));
+
+    // 동굴 입구(동쪽). 주변을 정리해 접근 가능하게.
+    final caveX = (roadX + 14).clamp(2, w - 4);
+    final caveY = (roadY - 6).clamp(3, h - 5);
+    for (var dx = -1; dx <= 2; dx++) {
+      for (var dy = -1; dy <= 3; dy++) {
+        final x = caveX + dx, y = caveY + dy;
+        if (_in(x, y) && matrix[x][y] == water) matrix[x][y] = grass;
+      }
+    }
+    decorations.add(CaveEntrance(_pos(caveX, caveY)));
+    caveEntrance = _pos(caveX, caveY) + Vector2(tile, tile * 2.5);
   }
 
   // ---- 물가 생성 ----

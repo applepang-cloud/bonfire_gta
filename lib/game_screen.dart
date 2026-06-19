@@ -5,19 +5,24 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'audio.dart';
+import 'choice.dart';
 import 'day_night.dart';
 import 'director.dart';
+import 'dungeon.dart';
 import 'events.dart';
+import 'faction.dart';
 import 'hud.dart';
 import 'interior.dart';
+import 'main_story.dart';
 import 'panels.dart';
 import 'player.dart';
 import 'story.dart';
+import 'story_arrow.dart';
 import 'ui_bus.dart';
 import 'village_map.dart';
 import 'wanted.dart';
 
-/// 중세 판타지 오픈월드 — 마을(오버월드)과 집 내부를 오가는 Bonfire 게임 화면.
+/// 중세 판타지 오픈월드 — 마을/집/던전을 오가는 Bonfire 게임 화면.
 class GameScreen extends StatefulWidget {
   const GameScreen({super.key});
 
@@ -28,10 +33,12 @@ class GameScreen extends StatefulWidget {
 class _GameScreenState extends State<GameScreen> {
   int _epoch = 0;
   int _villageSeed = 20260619;
-  String _scene = 'overworld';
-  Vector2? _overworldSpawn; // 마을로 돌아올 때 위치
+  String _scene = 'overworld'; // overworld | house | dungeon1 | dungeon2
+  Vector2? _overworldSpawn;
   int _houseSeed = 0;
   Vector2 _houseReturn = Vector2.zero();
+  Vector2 _dungeonReturn = Vector2.zero();
+  int _dungeonSeed = 7;
   bool _storyShown = false;
 
   @override
@@ -39,37 +46,94 @@ class _GameScreenState extends State<GameScreen> {
     super.initState();
     GameAudio.preload();
     GameEvents.instance.request.addListener(_onSceneRequest);
+    UiBus.instance.panel.addListener(_onPanel);
   }
 
   @override
   void dispose() {
     GameEvents.instance.request.removeListener(_onSceneRequest);
+    UiBus.instance.panel.removeListener(_onPanel);
     super.dispose();
+  }
+
+  void _onPanel() {
+    if (UiBus.instance.panel.value == Panel.quest) {
+      MainStory.instance.trigger(StoryTrigger.talkedQuestGiver);
+    }
   }
 
   void _onSceneRequest() {
     final req = GameEvents.instance.request.value;
     if (req == null) return;
-    GameEvents.instance.request.value = null; // 소비
+    GameEvents.instance.request.value = null;
+    final prev = _scene;
     setState(() {
-      if (req.scene == 'house') {
-        _scene = 'house';
-        _houseSeed = req.seed;
-        _houseReturn = req.spawn;
-      } else {
-        _scene = 'overworld';
-        _overworldSpawn = req.spawn;
+      switch (req.scene) {
+        case 'house':
+          _scene = 'house';
+          _houseSeed = req.seed;
+          _houseReturn = req.spawn;
+          break;
+        case 'dungeon1':
+          _scene = 'dungeon1';
+          _dungeonReturn = req.spawn;
+          _dungeonSeed = req.seed;
+          MainStory.instance.trigger(StoryTrigger.enteredCave);
+          break;
+        case 'dungeon2':
+          _scene = 'dungeon2';
+          _dungeonSeed = req.seed;
+          MainStory.instance.trigger(StoryTrigger.descended);
+          break;
+        default: // overworld
+          if (prev == 'dungeon2') {
+            MainStory.instance.trigger(StoryTrigger.bossDown);
+          }
+          _scene = 'overworld';
+          _overworldSpawn = req.spawn;
       }
       _epoch++;
     });
+    if (req.scene == 'dungeon1') {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _caveChoice());
+    }
+  }
+
+  void _caveChoice() {
+    ChoiceBus.instance.show(ChoiceRequest(
+      speaker: '동굴 깡패',
+      prompt: '"여기서부턴 우리 구역이다. 어쩔 테냐?"',
+      options: [
+        ChoiceOption('맞선다 — 검을 뽑는다', () {
+          FactionState.instance.alert(Faction.cave);
+        }),
+        ChoiceOption('통행료를 낸다 (50 G)', () {
+          if (Wanted.instance.money.value >= 50) {
+            Wanted.instance.money.value -= 50;
+            FactionState.instance.calm(Faction.cave);
+          } else {
+            FactionState.instance.alert(Faction.cave);
+          }
+        }),
+        ChoiceOption('산적과 한패라 둘러댄다', () {
+          // 동굴은 산적과 사이가 나쁘다 → 들통나 더 화남.
+          FactionState.instance.alert(Faction.cave);
+          FactionState.instance.alert(Faction.bandit);
+        }),
+      ],
+      onTimeout: () {
+        FactionState.instance.alert(Faction.cave); // 무답 → 공격
+      },
+    ));
   }
 
   void _respawn() {
     Wanted.instance.resetForRespawn();
+    FactionState.instance.reset();
     setState(() {
       _scene = 'overworld';
       _overworldSpawn = null;
-      _villageSeed += 7; // 새 마을
+      _villageSeed += 7;
       _epoch++;
     });
   }
@@ -82,16 +146,28 @@ class _GameScreenState extends State<GameScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final game =
-        _scene == 'house' ? _buildInterior(context) : _buildOverworld(context);
-
+    final Widget game;
+    switch (_scene) {
+      case 'house':
+        game = _buildInterior(context);
+        break;
+      case 'dungeon1':
+        game = _buildDungeon(context, 1);
+        break;
+      case 'dungeon2':
+        game = _buildDungeon(context, 2);
+        break;
+      default:
+        game = _buildOverworld(context);
+    }
     return Scaffold(
       backgroundColor: const Color(0xFF101a10),
       body: Stack(
         fit: StackFit.expand,
         children: [
           Positioned.fill(child: game),
-          if (!_storyShown) Positioned.fill(child: StoryIntro(onStart: _startGame)),
+          if (!_storyShown)
+            Positioned.fill(child: StoryIntro(onStart: _startGame)),
         ],
       ),
     );
@@ -143,7 +219,7 @@ class _GameScreenState extends State<GameScreen> {
       'keyhint': (_, __) => const ActionKeyLabel(),
       'minimap': (_, game) => MiniMap(
             game: game,
-            size: Vector2.all(130),
+            size: Vector2.all(140),
             margin: const EdgeInsets.only(bottom: 12, right: 12),
             borderRadius: BorderRadius.circular(8),
             border: Border.all(color: Colors.white24, width: 2),
@@ -152,11 +228,12 @@ class _GameScreenState extends State<GameScreen> {
             tileCollisionColor: const Color(0xFF6b4a2b),
             playerColor: Colors.yellowAccent,
             enemyColor: Colors.redAccent,
-            zoom: 0.55,
+            zoom: 0.5,
           ),
       'busted': (_, __) => BustedOverlay(onRespawn: _respawn),
       'settingsBtn': (_, __) => const SettingsButton(),
       'prompt': (_, __) => const InteractPrompt(),
+      'choice': (_, __) => const ChoiceOverlay(),
       'panel': (_, game) => ValueListenableBuilder<Panel>(
             valueListenable: UiBus.instance.panel,
             builder: (_, p, __) {
@@ -175,21 +252,32 @@ class _GameScreenState extends State<GameScreen> {
     };
   }
 
-  static const _overlayKeys = [
-    'hud',
-    'hint',
-    'keyhint',
-    'minimap',
-    'busted',
-    'settingsBtn',
-    'prompt',
-    'panel',
+  static const _owKeys = [
+    'hud', 'hint', 'keyhint', 'minimap', 'busted',
+    'settingsBtn', 'prompt', 'choice', 'panel', //
+  ];
+  static const _indoorKeys = [
+    'hud', 'keyhint', 'busted', 'settingsBtn', 'prompt', 'choice', 'panel', //
   ];
 
   Widget _buildOverworld(BuildContext context) {
-    final rng = Random(_villageSeed);
-    final world = VillageWorld(tile: 16, w: 64, h: 64, rng: rng);
+    final world = VillageWorld(tile: 16, w: 64, h: 64, rng: Random(_villageSeed));
     final spawn = _overworldSpawn ?? world.playerSpawn;
+
+    // 메인 스토리 목표 위치 설정.
+    final beat = MainStory.instance.current;
+    Vector2? marker;
+    switch (beat.target) {
+      case StoryTarget.questGiver:
+        marker = world.questGiverPos;
+        break;
+      case StoryTarget.cave:
+        marker = world.caveEntrance;
+        break;
+      case StoryTarget.none:
+        marker = null;
+    }
+    MainStory.instance.marker.value = marker;
 
     return BonfireWidget(
       key: ValueKey('ow_$_epoch'),
@@ -198,6 +286,8 @@ class _GameScreenState extends State<GameScreen> {
       map: world.buildMap(),
       components: [
         ...world.decorations,
+        if (marker != null) Beacon(marker),
+        StoryArrow(),
         WorldDirector(world.roadPoints, Random()),
       ],
       hudComponents: [DayNight()],
@@ -208,14 +298,13 @@ class _GameScreenState extends State<GameScreen> {
       ),
       backgroundColor: const Color(0xFF1c2a1c),
       overlayBuilderMap: _overlays(),
-      initialActiveOverlays: _overlayKeys,
+      initialActiveOverlays: _owKeys,
     );
   }
 
   Widget _buildInterior(BuildContext context) {
     final interior =
         Interior(tile: 16, seed: _houseSeed, returnSpawn: _houseReturn);
-
     return BonfireWidget(
       key: ValueKey('in_$_epoch'),
       playerControllers: _controllers(),
@@ -229,14 +318,31 @@ class _GameScreenState extends State<GameScreen> {
       ),
       backgroundColor: const Color(0xFF0d0a08),
       overlayBuilderMap: _overlays(),
-      initialActiveOverlays: const [
-        'hud',
-        'keyhint',
-        'busted',
-        'settingsBtn',
-        'prompt',
-        'panel',
-      ],
+      initialActiveOverlays: _indoorKeys,
+    );
+  }
+
+  Widget _buildDungeon(BuildContext context, int floor) {
+    final d = Dungeon(
+      floorNum: floor,
+      seed: _dungeonSeed,
+      overworldReturn: _dungeonReturn,
+    );
+    return BonfireWidget(
+      key: ValueKey('dg${floor}_$_epoch'),
+      playerControllers: _controllers(),
+      player: GtaPlayer(d.playerSpawn),
+      map: d.buildMap(),
+      components: d.components,
+      hudComponents: [CaveDark()],
+      cameraConfig: CameraConfig(
+        moveOnlyMapArea: true,
+        zoom: getZoomFromMaxVisibleTile(context, 16, 18),
+        initPosition: d.playerSpawn,
+      ),
+      backgroundColor: const Color(0xFF05040a),
+      overlayBuilderMap: _overlays(),
+      initialActiveOverlays: _indoorKeys,
     );
   }
 }

@@ -30,3 +30,17 @@ class DayNight extends GameComponent {
   @override
   int get priority => 999990;
 }
+
+/// 던전용 고정 어둠 틴트(항상 어둡고 무섭게).
+class CaveDark extends GameComponent {
+  final _paint = Paint()..color = const Color(0x8C0a0612);
+
+  @override
+  int get priority => 999990;
+
+  @override
+  void render(Canvas canvas) {
+    final s = gameRef.size;
+    canvas.drawRect(Rect.fromLTWH(0, 0, s.x, s.y), _paint);
+  }
+}

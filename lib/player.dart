@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 
 import 'audio.dart';
 import 'events.dart';
+import 'faction.dart';
 import 'profile.dart';
 import 'sprites.dart';
 import 'ui_bus.dart';
@@ -121,6 +122,7 @@ class GtaPlayer extends SimplePlayer with BlockMovementCollision {
     super.update(dt);
     if (_invuln > 0) _invuln -= dt;
     Wanted.instance.tick(dt);
+    FactionState.instance.tick(dt);
     Wanted.instance.setHealth(maxLife == 0 ? 0 : life / maxLife);
   }
 
