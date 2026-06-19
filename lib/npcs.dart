@@ -4,9 +4,11 @@ import 'package:bonfire/bonfire.dart';
 import 'package:flutter/material.dart';
 
 import 'audio.dart';
+import 'boss.dart';
 import 'dialogue.dart';
 import 'events.dart';
 import 'faction.dart';
+import 'main_story.dart';
 import 'profile.dart';
 import 'quests.dart';
 import 'sprites.dart';
@@ -430,6 +432,76 @@ class CaveThug extends FactionEnemy {
     Wanted.instance.addKill();
     Profile.instance.addXp(25);
     GameAudio.coin();
+  }
+}
+
+/// 드래곤 보스 — 던전 깊은 곳의 최종 보스. 거대하고 단단하며 화염 브레스를 뿜는다.
+/// 동굴 조직 소속(주변 깡패와 함께 싸운다). 상단 보스 체력바 표시.
+class Dragon extends FactionEnemy {
+  static const double s = 64;
+  Dragon(Vector2 position)
+      : super(
+          position: position,
+          animation: DragonSprites.animation(),
+          size: s,
+          speed: s * 0.7,
+          life: 1500 * _hpMul(),
+          faction: Faction.cave,
+          autoHostile: true,
+          meleeDamage: 38,
+          vision: s * 8,
+          barkLines: Lines.dragon,
+          barkColor: const Color(0xFFFF7043),
+          hbFactor: 0.5,
+          barkMin: 4,
+          barkMax: 7,
+        );
+
+  @override
+  void onMount() {
+    super.onMount();
+    BossState.instance.begin('붉은 드래곤 발록');
+  }
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+    if (isDead) return;
+    BossState.instance.setHp(maxLife == 0 ? 0 : life / maxLife);
+    // 화염 브레스(주기적).
+    if (GameState.running && huntsPlayer() && checkInterval('breath', 2600, dt)) {
+      GameAudio.swing();
+      simpleAttackRange(
+        animation: PlayerSprites.fireballRight,
+        animationDestroy: PlayerSprites.explosion,
+        size: Vector2.all(30),
+        damage: _dmg(22),
+        speed: s * 6,
+        interval: 1,
+        execute: GameAudio.hit,
+      );
+    }
+  }
+
+  @override
+  void dropRewards() {
+    Wanted.instance.addGold(400 + _rng.nextInt(300));
+    Wanted.instance.addKill();
+    Profile.instance.addXp(300);
+    MainStory.instance.trigger(StoryTrigger.bossDown);
+    GameAudio.coin();
+  }
+
+  @override
+  void onDie() {
+    BossState.instance.end();
+    super.onDie();
+  }
+
+  @override
+  void onRemove() {
+    BossState.instance.end();
+    super.onRemove();
   }
 }
 

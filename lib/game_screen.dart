@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'audio.dart';
+import 'boss.dart';
 import 'choice.dart';
 import 'day_night.dart';
 import 'director.dart';
@@ -130,6 +131,7 @@ class _GameScreenState extends State<GameScreen> {
   void _respawn() {
     Wanted.instance.resetForRespawn();
     FactionState.instance.reset();
+    BossState.instance.end();
     setState(() {
       _scene = 'overworld';
       _overworldSpawn = null;
@@ -142,6 +144,36 @@ class _GameScreenState extends State<GameScreen> {
     GameState.running = true;
     GameAudio.startBgm();
     setState(() => _storyShown = true);
+  }
+
+  /// 테스트: 장소 즉시 이동.
+  static final Vector2 _villageCenter = Vector2(336, 512); // 대략 마을 중심
+  void _teleport(String dest) {
+    UiBus.instance.close();
+    BossState.instance.end();
+    setState(() {
+      switch (dest) {
+        case 'house':
+          _scene = 'house';
+          _houseSeed = 42;
+          _houseReturn = _villageCenter;
+          break;
+        case 'dungeon1':
+          _scene = 'dungeon1';
+          _dungeonReturn = _villageCenter;
+          _dungeonSeed = 7;
+          break;
+        case 'dungeon2':
+          _scene = 'dungeon2';
+          _dungeonReturn = _villageCenter;
+          _dungeonSeed = 7;
+          break;
+        default:
+          _scene = 'overworld';
+          _overworldSpawn = null;
+      }
+      _epoch++;
+    });
   }
 
   @override
@@ -231,6 +263,7 @@ class _GameScreenState extends State<GameScreen> {
             zoom: 0.5,
           ),
       'busted': (_, __) => BustedOverlay(onRespawn: _respawn),
+      'boss': (_, __) => const BossBar(),
       'settingsBtn': (_, __) => const SettingsButton(),
       'prompt': (_, __) => const InteractPrompt(),
       'choice': (_, __) => const ChoiceOverlay(),
@@ -244,6 +277,8 @@ class _GameScreenState extends State<GameScreen> {
                   return ShopPanel(game: game);
                 case Panel.settings:
                   return const SettingsPanel();
+                case Panel.test:
+                  return TestPanel(onGo: _teleport);
                 case Panel.none:
                   return const SizedBox.shrink();
               }
@@ -253,11 +288,12 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   static const _owKeys = [
-    'hud', 'hint', 'keyhint', 'minimap', 'busted',
+    'hud', 'hint', 'keyhint', 'minimap', 'busted', 'boss',
     'settingsBtn', 'prompt', 'choice', 'panel', //
   ];
   static const _indoorKeys = [
-    'hud', 'keyhint', 'busted', 'settingsBtn', 'prompt', 'choice', 'panel', //
+    'hud', 'keyhint', 'busted', 'boss',
+    'settingsBtn', 'prompt', 'choice', 'panel', //
   ];
 
   Widget _buildOverworld(BuildContext context) {

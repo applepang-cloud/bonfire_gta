@@ -356,7 +356,7 @@ class ControlsHint extends StatelessWidget {
   }
 }
 
-/// 우상단 설정(톱니) 버튼.
+/// 우상단 설정(톱니) + 테스트(이동) 버튼.
 class SettingsButton extends StatelessWidget {
   const SettingsButton({super.key});
   @override
@@ -366,20 +366,31 @@ class SettingsButton extends StatelessWidget {
         alignment: Alignment.topRight,
         child: Padding(
           padding: const EdgeInsets.only(top: 6, right: 8),
-          child: Material(
-            color: Colors.black54,
-            shape: const CircleBorder(),
-            child: InkWell(
-              customBorder: const CircleBorder(),
-              onTap: () => UiBus.instance.open(Panel.settings),
-              child: const Padding(
-                padding: EdgeInsets.all(7),
-                child: Icon(Icons.settings, color: Colors.white70, size: 22),
-              ),
-            ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _round(Icons.science, const Color(0xFF8E24AA),
+                  () => UiBus.instance.open(Panel.test)),
+              const SizedBox(width: 6),
+              _round(Icons.settings, Colors.black54,
+                  () => UiBus.instance.open(Panel.settings)),
+            ],
           ),
         ),
       ),
     );
   }
+
+  Widget _round(IconData icon, Color bg, VoidCallback onTap) => Material(
+        color: bg,
+        shape: const CircleBorder(),
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(7),
+            child: Icon(icon, color: Colors.white, size: 21),
+          ),
+        ),
+      );
 }

@@ -53,6 +53,23 @@ class PlayerSprites {
       );
 }
 
+/// 드래곤 보스 — 2프레임(날개 펄럭) 시트(128x64), 모든 방향에 재사용.
+class DragonSprites {
+  static Future<SpriteAnimation> _flap() => SpriteAnimation.load(
+        'build/dragon.png',
+        SpriteAnimationData.sequenced(
+          amount: 2,
+          stepTime: 0.28,
+          textureSize: Vector2(64, 64),
+        ),
+      );
+
+  static SimpleDirectionAnimation animation() => SimpleDirectionAnimation(
+        idleRight: _flap(),
+        runRight: _flap(),
+      );
+}
+
 /// 갱단(고블린) 스프라이트.
 class GoblinSprites {
   static SimpleDirectionAnimation animation() => SimpleDirectionAnimation(

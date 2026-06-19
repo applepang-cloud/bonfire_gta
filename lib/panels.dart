@@ -340,6 +340,37 @@ Widget _btn(String label, Color color, VoidCallback onTap) => SizedBox(
       ),
     );
 
+// ----------------- 테스트(장소 이동) -----------------
+class TestPanel extends StatelessWidget {
+  final void Function(String dest) onGo;
+  const TestPanel({super.key, required this.onGo});
+
+  @override
+  Widget build(BuildContext context) {
+    return _Frame(
+      title: '테스트 · 장소 이동',
+      child: Column(
+        children: [
+          const Padding(
+            padding: EdgeInsets.only(bottom: 8),
+            child: Text('원하는 장소로 즉시 이동해 확인합니다.',
+                style: TextStyle(color: Colors.white60, fontSize: 12)),
+          ),
+          _btn('🏘  마을 (오버월드)', const Color(0xFF43A047),
+              () => onGo('overworld')),
+          const SizedBox(height: 6),
+          _btn('🏠  민가 내부', const Color(0xFF6D4C41), () => onGo('house')),
+          const SizedBox(height: 6),
+          _btn('🕯  던전 1층', const Color(0xFF455A64), () => onGo('dungeon1')),
+          const SizedBox(height: 6),
+          _btn('🐉  던전 2층 (드래곤 보스)', const Color(0xFFB71C1C),
+              () => onGo('dungeon2')),
+        ],
+      ),
+    );
+  }
+}
+
 // ----------------- 상호작용 안내 -----------------
 class InteractPrompt extends StatelessWidget {
   const InteractPrompt({super.key});

@@ -144,12 +144,13 @@ class Dungeon {
             Vector2(tile / 2, tile / 2)));
       }
     } else {
-      // 2층: 더 많은 깡패 + 두목(오우거).
-      for (var i = 0; i < 6; i++) {
-        components.add(CaveThug(_p(3 + rng.nextInt(w - 6), 3 + rng.nextInt(h - 7)) +
-            Vector2(tile / 2, tile / 2)));
+      // 2층: 깡패 무리 + 최종 보스 드래곤(깊은 안쪽).
+      for (var i = 0; i < 5; i++) {
+        components.add(CaveThug(
+            _p(3 + rng.nextInt(w - 6), 5 + rng.nextInt(h - 9)) +
+                Vector2(tile / 2, tile / 2)));
       }
-      components.add(Ogre(_p(cx, 2) + Vector2(tile / 2, tile / 2)));
+      components.add(Dragon(_p(cx - 2, 1)));
     }
   }
 

@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'events.dart';
 
 /// 열려 있는 전체화면 패널.
-enum Panel { none, quest, shop, settings }
+enum Panel { none, quest, shop, settings, test }
 
 /// 패널 열기/닫기 버스. 패널이 열리면 게임을 일시정지한다.
 class UiBus {
