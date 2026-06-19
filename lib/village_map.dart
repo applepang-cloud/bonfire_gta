@@ -58,25 +58,18 @@ class VillageWorld {
       }
     }
 
-    // 굽이치는 흙길(가로 1, 세로 1).
+    // 굽이치는 흙길 — 둥근 브러시로 곡선을 따라 칠해 계단 현상 제거.
     final roadY = h ~/ 2;
     for (var x = 1; x < w - 1; x++) {
-      final yy = roadY + (sin(x * 0.18) * 3).round();
-      for (var dy = 0; dy < 2; dy++) {
-        if (_in(x, yy + dy) && matrix[x][yy + dy] != water) {
-          matrix[x][yy + dy] = dirt;
-        }
-      }
+      final cy = roadY + (sin(x * 0.10) * 3 + sin(x * 0.04) * 2).round();
+      _stampDisk(x, cy, 1.7, dirt, onlyGrass: true);
     }
     final roadX = w ~/ 3;
     for (var y = 1; y < h - 1; y++) {
-      final xx = roadX + (sin(y * 0.16) * 3).round();
-      for (var dx = 0; dx < 2; dx++) {
-        if (_in(xx + dx, y) && matrix[xx + dx][y] != water) {
-          matrix[xx + dx][y] = dirt;
-        }
-      }
+      final cx = roadX + (sin(y * 0.09) * 3 + sin(y * 0.05) * 2).round();
+      _stampDisk(cx, y, 1.7, dirt, onlyGrass: true);
     }
+    _fillDirtNotches(); // 길 안쪽 1칸 잔디 구멍 메우기
 
     // 집 배치(마을). 길 근처 잔디에, 서로 떨어지게.
     final roofs = <Future<Sprite>>[
@@ -173,21 +166,52 @@ class VillageWorld {
 
   // ---- 물가 생성 ----
   void _carveWater(Random rng) {
-    // 굵은 강(세로), 완만한 곡선.
-    final baseX = (w * 0.72).floor();
+    // 굵은 강 — 둥근 브러시로 완만한 곡선을 따라 칠해 가장자리를 매끈하게.
+    final baseX = (w * 0.74).floor();
     for (var y = 1; y < h - 1; y++) {
-      final meander = (sin(y * 0.11) * 4 + sin(y * 0.05) * 3).round();
-      final cxr = baseX + meander;
-      for (var dx = -3; dx <= 3; dx++) {
-        final x = cxr + dx;
-        if (_in(x, y)) matrix[x][y] = water;
-      }
+      final cx = baseX + (sin(y * 0.08) * 5 + sin(y * 0.03) * 2).round();
+      _stampDisk(cx, y, 3.2, water);
     }
     // 호수 2개(타원).
     _lake((w * 0.27).round(), (h * 0.30).round(), 6, 4);
     _lake((w * 0.52).round(), (h * 0.80).round(), 5, 4);
     _despikeWater();
     _shoreline();
+  }
+
+  // 둥근 브러시로 한 점을 중심으로 원형 영역을 칠한다.
+  void _stampDisk(int cx, int cy, double r, double value,
+      {bool onlyGrass = false}) {
+    final ri = r.ceil();
+    final r2 = r * r;
+    for (var dx = -ri; dx <= ri; dx++) {
+      for (var dy = -ri; dy <= ri; dy++) {
+        if (dx * dx + dy * dy > r2) continue;
+        final x = cx + dx, y = cy + dy;
+        if (!_in(x, y)) continue;
+        if (onlyGrass && matrix[x][y] != grass) continue;
+        matrix[x][y] = value;
+      }
+    }
+  }
+
+  // 흙길 안쪽에 잔디 1칸이 끼면 메워 길을 매끈하게.
+  void _fillDirtNotches() {
+    final fill = <List<int>>[];
+    for (var x = 1; x < w - 1; x++) {
+      for (var y = 1; y < h - 1; y++) {
+        if (matrix[x][y] != grass) continue;
+        var d = 0;
+        if (matrix[x - 1][y] == dirt) d++;
+        if (matrix[x + 1][y] == dirt) d++;
+        if (matrix[x][y - 1] == dirt) d++;
+        if (matrix[x][y + 1] == dirt) d++;
+        if (d >= 3) fill.add([x, y]);
+      }
+    }
+    for (final f in fill) {
+      matrix[f[0]][f[1]] = dirt;
+    }
   }
 
   void _lake(int cx, int cy, int rx, int ry) {
