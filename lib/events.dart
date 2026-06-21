@@ -6,6 +6,15 @@ class GameState {
   static bool running = false;
 }
 
+/// 현재 씬의 지형 정보 — 플레이어가 물/벽 등 막힌 타일에 갇히는 것을 복구할 때 사용.
+class WorldInfo {
+  WorldInfo._();
+  static final WorldInfo instance = WorldInfo._();
+
+  /// 해당 월드 좌표가 들어가면 안 되는 타일(물 등)인지. 오버월드에서만 설정.
+  bool Function(Vector2 worldPos)? isBlocked;
+}
+
 /// 씬 전환 요청(오버월드 ↔ 집 내부).
 class SceneRequest {
   final String scene; // 'overworld' | 'house'

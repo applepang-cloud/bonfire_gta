@@ -49,6 +49,12 @@ class _GameScreenState extends State<GameScreen> {
   void initState() {
     super.initState();
     GameAudio.preload();
+    // 모든 스프라이트를 미리 디코드해 초반 끊김(렉) 완화.
+    () async {
+      try {
+        await Flame.images.loadAllImages();
+      } catch (_) {}
+    }();
     GameEvents.instance.request.addListener(_onSceneRequest);
     UiBus.instance.panel.addListener(_onPanel);
     MenuKeys.instance.handler = _handleMenuKey;
@@ -373,6 +379,7 @@ class _GameScreenState extends State<GameScreen> {
   Widget _buildOverworld(BuildContext context) {
     final world = VillageWorld(tile: 16, w: 64, h: 64, rng: Random(_villageSeed));
     final spawn = _overworldSpawn ?? world.playerSpawn;
+    WorldInfo.instance.isBlocked = world.isWaterAt; // 물 끼임 복구 활성
 
     // 메인 스토리 목표 위치 설정.
     final beat = MainStory.instance.current;
@@ -413,6 +420,7 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   Widget _buildInterior(BuildContext context) {
+    WorldInfo.instance.isBlocked = null;
     final interior =
         Interior(tile: 16, seed: _houseSeed, returnSpawn: _houseReturn);
     return BonfireWidget(
@@ -433,6 +441,7 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   Widget _buildDungeon(BuildContext context, int floor) {
+    WorldInfo.instance.isBlocked = null;
     final d = Dungeon(
       floorNum: floor,
       seed: _dungeonSeed,

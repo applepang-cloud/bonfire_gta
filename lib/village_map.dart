@@ -33,6 +33,14 @@ class VillageWorld {
 
   int _key(int x, int y) => y * w + x;
   Vector2 _pos(int x, int y) => Vector2(x * tile, y * tile);
+
+  /// 해당 월드 좌표가 물 타일인지(플레이어 끼임 복구용). 밖은 물로 취급.
+  bool isWaterAt(Vector2 world) {
+    final x = (world.x / tile).floor();
+    final y = (world.y / tile).floor();
+    if (x < 0 || y < 0 || x >= w || y >= h) return true;
+    return matrix[x][y] == water;
+  }
   bool _in(int x, int y) => x >= 1 && y >= 1 && x < w - 1 && y < h - 1;
   void _occupy(int x, int y) => _occupied.add(_key(x, y));
   bool _free(int x, int y) => !_occupied.contains(_key(x, y));

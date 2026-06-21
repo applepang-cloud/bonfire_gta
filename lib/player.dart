@@ -23,6 +23,7 @@ class GtaPlayer extends SimplePlayer with BlockMovementCollision {
   double attackPower = 25;
   bool _busted = false;
   double _invuln = 0; // 리스폰 직후 무적 시간
+  final Vector2 _lastSafe = Vector2.zero(); // 물/벽 끼임 복구용
 
   GtaPlayer(Vector2 position)
       : super(
@@ -38,6 +39,7 @@ class GtaPlayer extends SimplePlayer with BlockMovementCollision {
   @override
   Future<void> onLoad() {
     _invuln = 3.0; // 스폰 직후 무적 3초
+    _lastSafe.setFrom(position);
     applyStats();
     // 발 부분만 충돌 → 자연스러운 탑다운 이동.
     add(RectangleHitbox(
@@ -166,6 +168,20 @@ class GtaPlayer extends SimplePlayer with BlockMovementCollision {
     Wanted.instance.tick(dt);
     FactionState.instance.tick(dt);
     Wanted.instance.setHealth(maxLife == 0 ? 0 : life / maxLife);
+    _rescueFromWater();
+  }
+
+  /// 넉백 등으로 물 타일에 갇히면 직전 안전 위치로 복구.
+  void _rescueFromWater() {
+    if (isDead) return;
+    final blocked = WorldInfo.instance.isBlocked;
+    if (blocked == null) return; // 던전/실내는 검사 안 함
+    if (blocked(absoluteCenter)) {
+      position.setFrom(_lastSafe);
+      stopMove();
+    } else {
+      _lastSafe.setFrom(position);
+    }
   }
 
   @override

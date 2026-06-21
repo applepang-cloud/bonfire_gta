@@ -33,24 +33,21 @@ class WorldDirector extends GameComponent {
   @override
   Future<void> onMount() async {
     super.onMount();
-    for (var i = 0; i < 28; i++) {
+    // 초기엔 조금만 스폰(초반 렉 완화), 나머지는 시간이 지나며 보충.
+    for (var i = 0; i < 12; i++) {
       final p = _anyPoint();
       if (p != null) _spawnCivilian(p);
     }
-    for (var i = 0; i < 4; i++) {
+    for (var i = 0; i < 3; i++) {
       final p = _anyPoint();
       if (p != null) gameRef.add(Bandit(p));
     }
-    for (var i = 0; i < 4; i++) {
+    for (var i = 0; i < 3; i++) {
       final p = _anyPoint();
       if (p != null) gameRef.add(Monster(p));
     }
-    for (var i = 0; i < 2; i++) {
-      final p = _anyPoint();
-      if (p != null) gameRef.add(Archer(p));
-    }
-    final op = _anyPoint();
-    if (op != null) gameRef.add(Ogre(op));
+    final ap = _anyPoint();
+    if (ap != null) gameRef.add(Archer(ap));
   }
 
   Vector2? _anyPoint() =>
