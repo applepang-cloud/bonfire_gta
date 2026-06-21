@@ -3,9 +3,10 @@ import 'dart:math';
 import 'package:bonfire/bonfire.dart';
 
 import 'events.dart';
+import 'interact_sensor.dart';
 import 'npcs.dart';
 
-/// 동굴 입구(오버월드). 정면 아래로 들어가면 던전 1층으로.
+/// 동굴 입구(오버월드). 정면 아래에서 E로 들어가면 던전 1층으로.
 class CaveEntrance extends GameDecorationWithCollision {
   final int seed;
   CaveEntrance(Vector2 position, {this.seed = 7})
@@ -20,39 +21,18 @@ class CaveEntrance extends GameDecorationWithCollision {
 
   @override
   Future<void> onLoad() {
-    add(_CaveDoor(
-      position: Vector2(11, 20),
-      size: Vector2(10, 11),
-      returnSpawn: position + Vector2(16, 40),
-      seed: seed,
+    add(EntrySensor(
+      position: Vector2(9, 20),
+      size: Vector2(14, 12),
+      label: '동굴로 들어가기  (E)',
+      onEnter: () =>
+          GameEvents.instance.go('dungeon1', position + Vector2(16, 40), seed),
     ));
     return super.onLoad();
   }
 }
 
-class _CaveDoor extends GameComponent with Sensor<Player> {
-  final Vector2 returnSpawn;
-  final int seed;
-  bool _used = false;
-  _CaveDoor({
-    required Vector2 position,
-    required Vector2 size,
-    required this.returnSpawn,
-    required this.seed,
-  }) {
-    this.position = position;
-    this.size = size;
-  }
-
-  @override
-  void onContact(Player component) {
-    if (_used) return;
-    _used = true;
-    GameEvents.instance.go('dungeon1', returnSpawn, seed);
-  }
-}
-
-/// 던전 한 층. floor 1 → 아래로 내려가는 계단, floor 2 → 두목.
+/// 던전 한 층. floor 1 → 아래로 내려가는 계단, floor 2 → 두목 드래곤.
 /// 둘 다 아래쪽 출구로 나가면 마을(또는 진행). 지형 0=벽, 1=바닥.
 class Dungeon {
   static const double wall = 0;
@@ -101,7 +81,6 @@ class Dungeon {
     );
     final cx = w ~/ 2;
 
-    // 기둥(엄폐물).
     for (var i = 0; i < 6; i++) {
       final px = 3 + rng.nextInt(w - 6);
       final py = 3 + rng.nextInt(h - 6);
@@ -109,42 +88,40 @@ class Dungeon {
       if (rng.nextBool()) _pillar(px + 1, py);
     }
 
-    // 아래쪽 출구(마을로). 러그 대신 계단 그림.
+    // 아래쪽 출구(마을로).
     components.add(GameDecoration.withSprite(
       sprite: Sprite.load('build/stairs_down.png'),
       position: _p(cx, h - 2),
       size: Vector2.all(tile),
     ));
-    components.add(_Portal(
+    components.add(EntrySensor(
       position: _p(cx, h - 2),
       size: Vector2.all(tile),
-      scene: 'overworld',
-      spawn: overworldReturn,
-      seed: 0,
+      label: '동굴 밖으로 나가기  (E)',
+      onEnter: () => GameEvents.instance.go('overworld', overworldReturn, 0),
     ));
     playerSpawn = _p(cx, h - 4) + Vector2(tile / 2, tile / 2);
 
     if (floorNum == 1) {
-      // 위쪽: 더 깊은 곳으로 내려가는 계단.
       components.add(GameDecoration.withSprite(
         sprite: Sprite.load('build/stairs_down.png'),
         position: _p(cx, 1),
         size: Vector2.all(tile),
       ));
-      components.add(_Portal(
+      components.add(EntrySensor(
         position: _p(cx, 1),
         size: Vector2.all(tile),
-        scene: 'dungeon2',
-        spawn: overworldReturn,
-        seed: seed,
+        label: '더 깊이 내려가기  (E)',
+        onEnter: () =>
+            GameEvents.instance.go('dungeon2', overworldReturn, seed),
       ));
-      // 깡패 무리.
       for (var i = 0; i < 5; i++) {
-        components.add(CaveThug(_p(3 + rng.nextInt(w - 6), 3 + rng.nextInt(h - 7)) +
-            Vector2(tile / 2, tile / 2)));
+        components.add(CaveThug(
+            _p(3 + rng.nextInt(w - 6), 3 + rng.nextInt(h - 7)) +
+                Vector2(tile / 2, tile / 2)));
       }
     } else {
-      // 2층: 깡패 무리 + 최종 보스 드래곤(깊은 안쪽).
+      // 2층: 깡패 무리 + 최종 보스 드래곤.
       for (var i = 0; i < 5; i++) {
         components.add(CaveThug(
             _p(3 + rng.nextInt(w - 6), 5 + rng.nextInt(h - 9)) +
@@ -176,38 +153,5 @@ class Dungeon {
         ],
       ).build(props),
     );
-  }
-}
-
-/// 던전 내 이동 포털(계단/출구).
-class _Portal extends GameComponent with Sensor<Player> {
-  final String scene;
-  final Vector2 spawn;
-  final int seed;
-  bool _used = false;
-  double _ignore = 0.9;
-
-  _Portal({
-    required Vector2 position,
-    required Vector2 size,
-    required this.scene,
-    required this.spawn,
-    required this.seed,
-  }) {
-    this.position = position;
-    this.size = size;
-  }
-
-  @override
-  void update(double dt) {
-    super.update(dt);
-    if (_ignore > 0) _ignore -= dt;
-  }
-
-  @override
-  void onContact(Player component) {
-    if (_used || _ignore > 0) return;
-    _used = true;
-    GameEvents.instance.go(scene, spawn, seed);
   }
 }

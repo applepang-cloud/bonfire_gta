@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'audio.dart';
+import 'choice.dart';
 import 'events.dart';
 import 'faction.dart';
+import 'input.dart';
 import 'profile.dart';
 import 'sprites.dart';
 import 'ui_bus.dart';
@@ -54,21 +56,61 @@ class GtaPlayer extends SimplePlayer with BlockMovementCollision {
 
   void heal(double v) => addLife(v);
 
+  bool get _menuOpen =>
+      UiBus.instance.panel.value != Panel.none ||
+      ChoiceBus.instance.request.value != null;
+
+  // 마우스 클릭에서 호출(가드 포함).
+  void mouseMelee() {
+    if (!isDead && GameState.running && !_menuOpen) _meleeAttack();
+  }
+
+  void mouseRanged() {
+    if (!isDead && GameState.running && !_menuOpen) _rangedAttack();
+  }
+
+  @override
+  void onMount() {
+    super.onMount();
+    PlayerActions.instance.melee = mouseMelee;
+    PlayerActions.instance.ranged = mouseRanged;
+  }
+
+  @override
+  void onRemove() {
+    PlayerActions.instance.melee = null;
+    PlayerActions.instance.ranged = null;
+    super.onRemove();
+  }
+
+  @override
+  void onJoystickChangeDirectional(JoystickDirectionalEvent event) {
+    if (_menuOpen) {
+      stopMove();
+      return;
+    }
+    super.onJoystickChangeDirectional(event);
+  }
+
   @override
   void onJoystickAction(JoystickActionEvent event) {
-    if (isDead) return;
+    if (isDead) {
+      super.onJoystickAction(event);
+      return;
+    }
     if (event.event == ActionEvent.DOWN) {
       final id = event.id;
-      if (id == LogicalKeyboardKey.keyE) {
-        Interaction.instance.activate();
-      } else if (!GameState.running) {
-        // 일시정지(패널 열림) 중엔 공격 무시.
-      } else if (id == LogicalKeyboardKey.keyF ||
-          id == PlayerAction.attackRange) {
-        _rangedAttack();
-      } else if (id == LogicalKeyboardKey.shiftRight ||
-          id == PlayerAction.attack) {
-        _meleeAttack();
+      if (_menuOpen) {
+        if (id is LogicalKeyboardKey) MenuKeys.instance.dispatch(id);
+      } else if (id == LogicalKeyboardKey.keyE) {
+        Interaction.instance.activate(); // 대화/입장
+      } else if (GameState.running) {
+        if (id == PlayerAction.attackRange) {
+          _rangedAttack();
+        } else if (id == LogicalKeyboardKey.shiftRight ||
+            id == PlayerAction.attack) {
+          _meleeAttack();
+        }
       }
     }
     super.onJoystickAction(event);

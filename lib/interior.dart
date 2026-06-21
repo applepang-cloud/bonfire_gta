@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:bonfire/bonfire.dart';
 
 import 'events.dart';
+import 'interact_sensor.dart';
 import 'npcs.dart';
 
 /// 집 내부 — 가구가 갖춰진 가정집. 가족이 살며 돌아다닌다.
@@ -70,10 +71,11 @@ class Interior {
 
     // 출구(아래 가운데): 러그 + 센서.
     _decor('build/rug.png', _px(cx * t, (h - 2) * t), Vector2.all(t));
-    components.add(_ExitSensor(
+    components.add(EntrySensor(
       position: _px(cx * t, (h - 2) * t),
       size: Vector2.all(t),
-      returnSpawn: returnSpawn,
+      label: '밖으로 나가기  (E)',
+      onEnter: () => GameEvents.instance.go('overworld', returnSpawn, 0),
     ));
     // 플레이어는 출구에서 두 칸 이상 위에서 시작(겹침 방지).
     playerSpawn = _px(cx * t + t / 2, (h - 5) * t + t / 2);
@@ -149,30 +151,3 @@ class Interior {
   }
 }
 
-class _ExitSensor extends GameComponent with Sensor<Player> {
-  final Vector2 returnSpawn;
-  bool _used = false;
-  double _ignore = 0.9; // 진입 직후 잠깐은 무시(스폰 겹침 방지)
-
-  _ExitSensor({
-    required Vector2 position,
-    required Vector2 size,
-    required this.returnSpawn,
-  }) {
-    this.position = position;
-    this.size = size;
-  }
-
-  @override
-  void update(double dt) {
-    super.update(dt);
-    if (_ignore > 0) _ignore -= dt;
-  }
-
-  @override
-  void onContact(Player component) {
-    if (_used || _ignore > 0) return;
-    _used = true;
-    GameEvents.instance.go('overworld', returnSpawn, 0);
-  }
-}

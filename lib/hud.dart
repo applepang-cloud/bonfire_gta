@@ -345,7 +345,7 @@ class ControlsHint extends StatelessWidget {
               borderRadius: BorderRadius.circular(8),
             ),
             child: const Text(
-              'WASD 이동 · 우 Shift 공격 · F 원거리 · E 대화',
+              'WASD 이동 · 마우스 좌=근접/우=원거리 · 우Shift 근접 · E 대화·입장\n메뉴: 1/2/3 선택 · Enter 수락 · Esc 닫기',
               textAlign: TextAlign.right,
               style: TextStyle(color: Colors.white70, fontSize: 11),
             ),

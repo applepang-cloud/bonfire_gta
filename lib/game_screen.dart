@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:bonfire/bonfire.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -13,10 +14,12 @@ import 'dungeon.dart';
 import 'events.dart';
 import 'faction.dart';
 import 'hud.dart';
+import 'input.dart';
 import 'interior.dart';
 import 'main_story.dart';
 import 'panels.dart';
 import 'player.dart';
+import 'quests.dart';
 import 'story.dart';
 import 'story_arrow.dart';
 import 'ui_bus.dart';
@@ -48,13 +51,59 @@ class _GameScreenState extends State<GameScreen> {
     GameAudio.preload();
     GameEvents.instance.request.addListener(_onSceneRequest);
     UiBus.instance.panel.addListener(_onPanel);
+    MenuKeys.instance.handler = _handleMenuKey;
   }
 
   @override
   void dispose() {
     GameEvents.instance.request.removeListener(_onSceneRequest);
     UiBus.instance.panel.removeListener(_onPanel);
+    MenuKeys.instance.handler = null;
     super.dispose();
+  }
+
+  /// 메뉴/선택지 키보드 조작.
+  void _handleMenuKey(LogicalKeyboardKey k) {
+    final choice = ChoiceBus.instance.request.value;
+    if (choice != null) {
+      if (k == LogicalKeyboardKey.digit1) {
+        ChoiceBus.instance.resolve(0);
+      } else if (k == LogicalKeyboardKey.digit2) {
+        ChoiceBus.instance.resolve(1);
+      } else if (k == LogicalKeyboardKey.digit3) {
+        ChoiceBus.instance.resolve(2);
+      } else if (k == LogicalKeyboardKey.escape) {
+        ChoiceBus.instance.resolve(-1);
+      }
+      return;
+    }
+    final panel = UiBus.instance.panel.value;
+    if (panel == Panel.none) return;
+    if (k == LogicalKeyboardKey.escape) {
+      UiBus.instance.close();
+      return;
+    }
+    if (panel == Panel.quest &&
+        (k == LogicalKeyboardKey.enter ||
+            k == LogicalKeyboardKey.numpadEnter)) {
+      final a = QuestLog.instance.active.value;
+      if (a != null) {
+        if (a.isDone) QuestLog.instance.complete();
+      } else {
+        final n = QuestLog.instance.nextAvailable;
+        if (n != null) QuestLog.instance.accept(n);
+      }
+      return;
+    }
+    if (panel == Panel.test) {
+      const dests = ['overworld', 'house', 'dungeon1', 'dungeon2'];
+      int? i;
+      if (k == LogicalKeyboardKey.digit1) i = 0;
+      if (k == LogicalKeyboardKey.digit2) i = 1;
+      if (k == LogicalKeyboardKey.digit3) i = 2;
+      if (k == LogicalKeyboardKey.digit4) i = 3;
+      if (i != null) _teleport(dests[i]);
+    }
   }
 
   void _onPanel() {
@@ -194,15 +243,33 @@ class _GameScreenState extends State<GameScreen> {
     }
     return Scaffold(
       backgroundColor: const Color(0xFF101a10),
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          Positioned.fill(child: game),
-          if (!_storyShown)
-            Positioned.fill(child: StoryIntro(onStart: _startGame)),
-        ],
+      body: Listener(
+        onPointerDown: _onPointerDown,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Positioned.fill(child: game),
+            if (!_storyShown)
+              Positioned.fill(child: StoryIntro(onStart: _startGame)),
+          ],
+        ),
       ),
     );
+  }
+
+  // 마우스 좌클릭=근접, 우클릭=원거리.
+  void _onPointerDown(PointerDownEvent e) {
+    if (!_storyShown) return;
+    if (e.kind != PointerDeviceKind.mouse) return;
+    if (UiBus.instance.panel.value != Panel.none ||
+        ChoiceBus.instance.request.value != null) {
+      return;
+    }
+    if (e.buttons == kSecondaryButton) {
+      PlayerActions.instance.ranged?.call();
+    } else if (e.buttons == kPrimaryButton) {
+      PlayerActions.instance.melee?.call();
+    }
   }
 
   List<PlayerController> _controllers() => [
@@ -238,7 +305,14 @@ class _GameScreenState extends State<GameScreen> {
             acceptedKeys: [
               LogicalKeyboardKey.shiftRight,
               LogicalKeyboardKey.keyE,
-              LogicalKeyboardKey.keyF,
+              // 메뉴/선택지 키보드 조작
+              LogicalKeyboardKey.digit1,
+              LogicalKeyboardKey.digit2,
+              LogicalKeyboardKey.digit3,
+              LogicalKeyboardKey.digit4,
+              LogicalKeyboardKey.enter,
+              LogicalKeyboardKey.numpadEnter,
+              LogicalKeyboardKey.escape,
             ],
           ),
         ),

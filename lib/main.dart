@@ -6,6 +6,10 @@ import 'profile.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // 우클릭(원거리 공격) 시 브라우저 기본 메뉴가 뜨지 않게.
+  try {
+    BrowserContextMenu.disableContextMenu();
+  } catch (_) {}
   await Profile.instance.load(); // 저장된 진행도 불러오기
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.landscapeLeft,
